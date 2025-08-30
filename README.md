@@ -1,43 +1,69 @@
-# 🔍 BuscaVivaMT - Sistema de Localização de Pessoas
+# React + TypeScript + Vite
 
-<div align="center">
-  
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
-![Status](https://img.shields.io/badge/status-development-yellow.svg)
-![License](https://img.shields.io/badge/license-MIT-green.svg)
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-**Reconectando Vidas, Restaurando Esperanças**
+Currently, two official plugins are available:
 
-[Documentação](./docs) • [Arquitetura](./docs/02-architecture) • [Setup](./docs/06-development/SETUP.md) • [Contribuir](./docs/06-development/CONTRIBUTING.md)
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-</div>
+## Expanding the ESLint configuration
 
-## 📋 Sobre o Projeto
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
-BuscaVivaMT é uma plataforma web moderna desenvolvida para auxiliar na localização de pessoas desaparecidas no estado de Mato Grosso. O sistema permite consultas públicas, visualização de informações detalhadas e colaboração cidadã através do envio de avistamentos e informações relevantes.
+```js
+export default tseslint.config([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
 
-## 🎯 Objetivos
+      // Remove tseslint.configs.recommended and replace with this
+      ...tseslint.configs.recommendedTypeChecked,
+      // Alternatively, use this for stricter rules
+      ...tseslint.configs.strictTypeChecked,
+      // Optionally, add this for stylistic rules
+      ...tseslint.configs.stylisticTypeChecked,
 
-- Facilitar o acesso público a informações sobre pessoas desaparecidas
-- Permitir colaboração cidadã no processo de busca
-- Fornecer uma interface intuitiva e acessível
-- Integrar com a API oficial da Polícia Judiciária Civil de MT
+      // Other configs...
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
+```
 
-## 📚 Documentação
+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
 
-Toda a documentação do projeto está organizada na pasta [`/docs`](./docs):
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
 
-- **[Projeto](./docs/01-project)** - Charter, requisitos, escopo
-- **[Arquitetura](./docs/02-architecture)** - Decisões técnicas, stack
-- **[Design](./docs/03-design)** - Sistema de design, componentes
-- **[Negócio](./docs/04-business)** - Casos de uso, regras
-- **[Técnico](./docs/05-technical)** - APIs, modelos de dados
-- **[Desenvolvimento](./docs/06-development)** - Setup, padrões
-- **[Testes](./docs/07-testing)** - Estratégias, casos de teste
-- **[Deploy](./docs/08-deployment)** - CI/CD, Docker
-
-## 🚀 Quick Start
-
-```bash
-
-**Desenvolvido com dedicação por:** [EZEQUIEL VINICIUS QUEIROZ ROBERTO]
+export default tseslint.config([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+      // Enable lint rules for React
+      reactX.configs['recommended-typescript'],
+      // Enable lint rules for React DOM
+      reactDom.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
+```
