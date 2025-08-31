@@ -1,598 +1,131 @@
-# Catálogo de Componentes - BuscaVivaMT
+# Componentes — BuscaVivaMT
 
-## 🧩 Visão Geral
-
-Este documento cataloga todos os componentes UI do sistema BuscaViva, suas variações, propriedades e exemplos de uso.
-
-## 📚 Estrutura de Componentes
-
-```
-components/
-├── atoms/          # Componentes básicos indivisíveis
-├── molecules/      # Combinações de atoms
-├── organisms/      # Componentes complexos
-├── templates/      # Layouts de página
-└── pages/          # Páginas completas
-```
+Este documento cataloga os principais componentes da aplicação, com ênfase nos usados no fluxo de reporte de avistamento.
 
 ---
 
-## ⚛️ Atoms (Componentes Básicos)
+## 🧩 ReportForm
 
-### Button
+### Descrição
+Formulário que permite ao cidadão enviar informações sobre um possível avistamento de uma pessoa desaparecida.
 
-**Descrição:** Botão reutilizável com múltiplas variantes.
+### Props (valores esperados)
+```ts
+type ReportFormValues = {
+  informacao: string;
+  descricao: string;
+  data: string;    // formato yyyy-MM-dd
+  ocoId: number;
+  files: File[];
+};
+```
 
-**Props:**
-```typescript
-interface ButtonProps {
-  variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
-  size?: 'sm' | 'md' | 'lg';
-  disabled?: boolean;
-  loading?: boolean;
-  fullWidth?: boolean;
-  onClick?: () => void;
-  children: React.ReactNode;
+### Comportamento
+Valida campos com **Zod**:  
+- **informacao**: obrigatório, mínimo 10 caracteres  
+- **descricao**: obrigatório, mínimo 3 caracteres  
+- **data**: obrigatório, formato `yyyy-MM-dd`  
+- **ocoId**: obrigatório  
+- **files**: opcional, até 3 imagens válidas  
+
+Monta payload para `POST /v1/ocorrencias/informacoes-desaparecido`:  
+- **Query params**: informacao, descricao, data, ocoId  
+- **Body multipart**: files[]  
+
+### Exemplo
+```tsx
+import { useForm } from 'react-hook-form';
+import { useCreateInfoOcorrencia } from '@/hooks/useOccurrence';
+import { PhotoUploader } from '@/components/PhotoUploader';
+
+function ReportForm({ ocoId }: { ocoId: number }) {
+  const { register, handleSubmit, setValue } = useForm<ReportFormValues>();
+  const { mutate, isLoading } = useCreateInfoOcorrencia();
+
+  const onSubmit = (values: ReportFormValues) => mutate({ ...values, ocoId });
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <textarea {...register('informacao')} placeholder="Descreva o avistamento" />
+      <input {...register('descricao')} placeholder="Descrição do anexo" />
+      <input type="date" {...register('data')} />
+      <PhotoUploader onChange={(files) => setValue('files', files)} />
+      <button type="submit" disabled={isLoading}>Enviar</button>
+    </form>
+  );
 }
 ```
 
-**Variantes:**
-```tsx
-<Button variant="primary">Buscar Pessoa</Button>
-<Button variant="secondary">Cancelar</Button>
-<Button variant="danger">Excluir</Button>
-<Button variant="ghost">Ver Mais</Button>
-```
-
-**Tamanhos:**
-```tsx
-<Button size="sm">Pequeno</Button>
-<Button size="md">Médio</Button>
-<Button size="lg">Grande</Button>
-```
-
 ---
 
-### Input
+## 🖼️ PhotoUploader
 
-**Descrição:** Campo de entrada de texto.
+### Descrição
+Componente para anexar fotos no reporte.
 
-**Props:**
-```typescript
-interface InputProps {
-  type?: 'text' | 'email' | 'tel' | 'password' | 'number';
-  label?: string;
-  placeholder?: string;
-  error?: string;
-  disabled?: boolean;
-  required?: boolean;
-  value?: string;
-  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
-}
-```
+### Regras
+- Tipos aceitos: `image/jpeg`, `image/png`, `image/webp`  
+- Tamanho máximo: **5MB** por arquivo  
+- Quantidade máxima: **3 fotos**  
+- Exibir previews  
+- Permitir remover/reinserir arquivos  
+- Mostrar mensagens de erro claras em caso de tipo/tamanho inválido  
 
-**Estados:**
+### Exemplo
 ```tsx
-<Input label="Nome" placeholder="Digite o nome" />
-<Input label="Email" type="email" error="Email inválido" />
-<Input label="Telefone" type="tel" disabled />
-```
+function PhotoUploader({ onChange }: { onChange: (files: File[]) => void }) {
+  const [files, setFiles] = useState<File[]>([]);
 
----
-
-### Badge
-
-**Descrição:** Indicador de status ou categoria.
-
-**Props:**
-```typescript
-interface BadgeProps {
-  variant?: 'success' | 'danger' | 'warning' | 'info' | 'neutral';
-  size?: 'sm' | 'md';
-  children: React.ReactNode;
-}
-```
-
-**Exemplos:**
-```tsx
-<Badge variant="danger">Desaparecido</Badge>
-<Badge variant="success">Localizado</Badge>
-<Badge variant="warning">Atenção</Badge>
-```
-
----
-
-### Avatar
-
-**Descrição:** Exibição de foto de perfil/pessoa.
-
-**Props:**
-```typescript
-interface AvatarProps {
-  src?: string;
-  alt: string;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
-  fallback?: string; // Iniciais se não houver imagem
-}
-```
-
-**Exemplos:**
-```tsx
-<Avatar src="/photo.jpg" alt="João Silva" size="lg" />
-<Avatar fallback="JS" alt="João Silva" />
-```
-
----
-
-### Spinner
-
-**Descrição:** Indicador de carregamento.
-
-**Props:**
-```typescript
-interface SpinnerProps {
-  size?: 'sm' | 'md' | 'lg';
-  color?: 'primary' | 'white';
-}
-```
-
-**Exemplos:**
-```tsx
-<Spinner size="sm" />
-<Spinner size="lg" color="primary" />
-```
-
----
-
-## 🧪 Molecules (Componentes Compostos)
-
-### SearchBar
-
-**Descrição:** Barra de busca com ícone e clear button.
-
-**Props:**
-```typescript
-interface SearchBarProps {
-  placeholder?: string;
-  value?: string;
-  onSearch?: (value: string) => void;
-  onClear?: () => void;
-}
-```
-
-**Exemplo:**
-```tsx
-<SearchBar 
-  placeholder="Buscar por nome..." 
-  onSearch={handleSearch}
-/>
-```
-
----
-
-### Card
-
-**Descrição:** Container para conteúdo agrupado.
-
-**Props:**
-```typescript
-interface CardProps {
-  elevation?: 'none' | 'sm' | 'md' | 'lg';
-  padding?: 'none' | 'sm' | 'md' | 'lg';
-  onClick?: () => void;
-  children: React.ReactNode;
-}
-```
-
-**Exemplo:**
-```tsx
-<Card elevation="md" padding="lg">
-  <CardHeader>
-    <CardTitle>Título</CardTitle>
-  </CardHeader>
-  <CardContent>
-    Conteúdo do card
-  </CardContent>
-</Card>
-```
-
----
-
-### FormField
-
-**Descrição:** Campo de formulário com label e erro.
-
-**Props:**
-```typescript
-interface FormFieldProps {
-  label: string;
-  error?: string;
-  required?: boolean;
-  children: React.ReactNode;
-}
-```
-
-**Exemplo:**
-```tsx
-<FormField label="Nome Completo" required error={errors.name}>
-  <Input {...register('name')} />
-</FormField>
-```
-
----
-
-### Modal
-
-**Descrição:** Dialog modal overlay.
-
-**Props:**
-```typescript
-interface ModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  title?: string;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
-  children: React.ReactNode;
-}
-```
-
-**Exemplo:**
-```tsx
-<Modal isOpen={showModal} onClose={handleClose} title="Confirmar Ação">
-  <p>Tem certeza que deseja continuar?</p>
-  <ModalFooter>
-    <Button variant="secondary" onClick={handleClose}>Cancelar</Button>
-    <Button variant="primary" onClick={handleConfirm}>Confirmar</Button>
-  </ModalFooter>
-</Modal>
-```
-
----
-
-### Toast
-
-**Descrição:** Notificação temporária.
-
-**Props:**
-```typescript
-interface ToastProps {
-  type?: 'success' | 'error' | 'warning' | 'info';
-  message: string;
-  duration?: number;
-}
-```
-
-**Exemplo:**
-```tsx
-toast.success('Informação enviada com sucesso!');
-toast.error('Erro ao enviar informação');
-```
-
----
-
-## 🌿 Organisms (Componentes Complexos)
-
-### PersonCard
-
-**Descrição:** Card de pessoa desaparecida/localizada.
-
-**Props:**
-```typescript
-interface PersonCardProps {
-  person: {
-    id: string;
-    name: string;
-    photo?: string;
-    age: number;
-    status: 'missing' | 'found';
-    location: string;
-    date: string;
+  const validate = (f: File) => {
+    const okType = ['image/jpeg','image/png','image/webp'].includes(f.type);
+    const okSize = f.size <= 5 * 1024 * 1024;
+    return okType && okSize;
   };
-  onClick?: () => void;
-}
-```
 
-**Exemplo:**
-```tsx
-<PersonCard 
-  person={{
-    id: "1",
-    name: "João Silva",
-    photo: "/photos/joao.jpg",
-    age: 45,
-    status: "missing",
-    location: "Cuiabá, MT",
-    date: "2024-01-15"
-  }}
-  onClick={handleCardClick}
-/>
-```
-
-**Visual:**
-```
-┌─────────────────────────┐
-│  ┌─────┐                │
-│  │     │  João Silva    │
-│  │ 📷  │  45 anos       │
-│  │     │  🔴 Desaparecido│
-│  └─────┘  📍 Cuiabá, MT │
-│           📅 15/01/2024 │
-└─────────────────────────┘
-```
-
----
-
-### FilterPanel
-
-**Descrição:** Painel de filtros para busca.
-
-**Props:**
-```typescript
-interface FilterPanelProps {
-  filters: {
-    status?: 'all' | 'missing' | 'found';
-    city?: string;
-    dateRange?: [Date, Date];
+  const handleSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(e.target.files ?? []);
+    const valid = selected.filter(validate).slice(0, 3 - files.length);
+    const next = [...files, ...valid].slice(0, 3);
+    setFiles(next);
+    onChange(next);
   };
-  onFilterChange: (filters: Filters) => void;
-}
-```
 
-**Exemplo:**
-```tsx
-<FilterPanel 
-  filters={currentFilters}
-  onFilterChange={handleFilterUpdate}
-/>
-```
-
----
-
-### PersonDetailsHeader
-
-**Descrição:** Cabeçalho da página de detalhes.
-
-**Props:**
-```typescript
-interface PersonDetailsHeaderProps {
-  person: Person;
-  onReport: () => void;
-  onShare: () => void;
-}
-```
-
-**Visual:**
-```
-┌────────────────────────────────┐
-│  ← Voltar                      │
-│                                │
-│  ┌──────┐   JOÃO SILVA        │
-│  │      │   🔴 Desaparecido   │
-│  │  📷  │   45 anos           │
-│  │      │   Desde: 15/01/2024 │
-│  └──────┘                     │
-│                                │
-│  [📍 Reportar] [📤 Compartilhar]│
-└────────────────────────────────┘
-```
-
----
-
-### ReportForm
-
-**Descrição:** Formulário de avistamento.
-
-**Props:**
-```typescript
-interface ReportFormProps {
-  personId: string;
-  onSubmit: (data: ReportData) => void;
-  onCancel: () => void;
-}
-```
-
-**Campos:**
-- Nome do informante*
-- Telefone*
-- Email
-- Data/hora do avistamento*
-- Localização (mapa)*
-- Observações
-- Fotos (até 3)
-
----
-
-### MapPicker
-
-**Descrição:** Mapa interativo para seleção de localização.
-
-**Props:**
-```typescript
-interface MapPickerProps {
-  center?: [number, number];
-  zoom?: number;
-  value?: [number, number];
-  onChange?: (location: [number, number]) => void;
-}
-```
-
-**Exemplo:**
-```tsx
-<MapPicker 
-  center={[-15.6014, -56.0979]} // Cuiabá
-  zoom={12}
-  onChange={handleLocationSelect}
-/>
-```
-
----
-
-### PhotoUploader
-
-**Descrição:** Upload de múltiplas fotos.
-
-**Props:**
-```typescript
-interface PhotoUploaderProps {
-  maxFiles?: number;
-  maxSize?: number; // em MB
-  accept?: string[];
-  value?: File[];
-  onChange?: (files: File[]) => void;
-}
-```
-
-**Exemplo:**
-```tsx
-<PhotoUploader 
-  maxFiles={3}
-  maxSize={5}
-  accept={['image/jpeg', 'image/png']}
-  onChange={handleFilesChange}
-/>
-```
-
----
-
-### Pagination
-
-**Descrição:** Controles de paginação.
-
-**Props:**
-```typescript
-interface PaginationProps {
-  currentPage: number;
-  totalPages: number;
-  onPageChange: (page: number) => void;
-  showInfo?: boolean;
-}
-```
-
-**Exemplo:**
-```tsx
-<Pagination 
-  currentPage={1}
-  totalPages={10}
-  onPageChange={handlePageChange}
-  showInfo
-/>
-```
-
-**Visual:**
-```
-← Anterior  [1] 2 3 ... 10  Próximo →
-Mostrando 1-10 de 100 resultados
-```
-
----
-
-### EmptyState
-
-**Descrição:** Estado vazio para listas.
-
-**Props:**
-```typescript
-interface EmptyStateProps {
-  icon?: React.ReactNode;
-  title: string;
-  description?: string;
-  action?: {
-    label: string;
-    onClick: () => void;
+  const removeAt = (idx: number) => {
+    const next = files.filter((_, i) => i !== idx);
+    setFiles(next);
+    onChange(next);
   };
-}
-```
 
-**Exemplo:**
-```tsx
-<EmptyState 
-  icon={<SearchIcon />}
-  title="Nenhum resultado encontrado"
-  description="Tente ajustar os filtros ou fazer uma nova busca"
-  action={{
-    label: "Limpar filtros",
-    onClick: handleClearFilters
-  }}
-/>
-```
-
----
-
-## 📐 Templates (Layouts)
-
-### MainLayout
-
-**Descrição:** Layout principal da aplicação.
-
-**Estrutura:**
-```tsx
-<MainLayout>
-  <Header />
-  <main>
-    {children}
-  </main>
-  <Footer />
-</MainLayout>
-```
-
----
-
-### PageContainer
-
-**Descrição:** Container padrão para páginas.
-
-**Props:**
-```typescript
-interface PageContainerProps {
-  title?: string;
-  breadcrumbs?: Breadcrumb[];
-  actions?: React.ReactNode;
-  children: React.ReactNode;
-}
-```
-
----
-
-## 🎯 Padrões de Composição
-
-**Exemplo de Composição Completa:**
-```tsx
-// Página de listagem
-<MainLayout>
-  <PageContainer title="Pessoas Desaparecidas">
-    <div className="space-y-6">
-      <SearchBar onSearch={handleSearch} />
-      
-      <FilterPanel 
-        filters={filters}
-        onFilterChange={setFilters}
+  return (
+    <div>
+      <input
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        multiple
+        onChange={handleSelect}
       />
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {isLoading ? (
-          <Spinner size="lg" />
-        ) : people.length > 0 ? (
-          people.map(person => (
-            <PersonCard 
-              key={person.id}
-              person={person}
-              onClick={() => navigate(`/person/${person.id}`)}
-            />
-          ))
-        ) : (
-          <EmptyState 
-            title="Nenhuma pessoa encontrada"
-            description="Ajuste os filtros"
-          />
-        )}
-      </div>
-      
-      <Pagination 
-        currentPage={page}
-        totalPages={totalPages}
-        onPageChange={setPage}
-      />
+      <ul>
+        {files.map((f, i) => (
+          <li key={i}>
+            <img src={URL.createObjectURL(f)} alt={`foto-${i}`} />
+            <button type="button" onClick={() => removeAt(i)}>Remover</button>
+          </li>
+        ))}
+      </ul>
+      <p>Até 3 fotos (JPG/PNG/WebP), máx. 5MB cada.</p>
     </div>
-  </PageContainer>
-</MainLayout>
+  );
+}
 ```
+
+---
+
+## 📌 Outros Componentes Relevantes
+- **PersonCard**: exibe foto, nome, idade, status (DESAPARECIDO/LOCALIZADO).  
+- **Pagination**: controles de navegação de página (mostrando 10 por página).  
+- **SearchBar**: campo de busca com debounce (300ms).  
+- **FilterPanel**: filtros (status, cidade, idade, data).  
+- **EmptyState**: feedback de lista vazia.  
+- **StatusPill**: pill colorida para status da pessoa.  
+- **Loading/Spinner**: feedback visual de carregamento.  
+- **Modal**: para abertura do ReportForm em overlay.  

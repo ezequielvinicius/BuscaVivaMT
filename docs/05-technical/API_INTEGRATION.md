@@ -1,351 +1,336 @@
-# Integração com API - BuscaVivaMT
+# Integração com a API — BuscaVivaMT
 
-Este documento detalha a integração do frontend BuscaVivaMT com a API de pessoas desaparecidas.
+Este documento descreve **como o frontend (React + TS)** se integra à API oficial `https://abitus-api.geia.vip`, incluindo cliente Axios, endpoints, serviços (pessoas e ocorrências), hooks do React Query, tratamento de erros e exemplos de uso.
 
-## 1. Configuração Base
+> **Resumo crítico**
+> - Upload de fotos do reporte: **`multipart/form-data`** com campo `files[]` (body)  
+> - Quatro campos obrigatórios do reporte (**query**): `informacao`, `descricao`, `data (yyyy-MM-dd)`, `ocoId`  
+> - Endpoints públicos (sem token): `/v1/pessoas/aberto/*`  
+> - Endpoints protegidos (com token): `/v1/ocorrencias/*`
 
-### 1.1 Cliente Axios
+---
 
-```typescript
-// src/services/api/client.ts
-import axios, { AxiosInstance, AxiosError } from 'axios';
-import toast from 'react-hot-toast';
+## 1) Variáveis de ambiente (`.env`)
+
+```env
+VITE_API_BASE_URL=https://abitus-api.geia.vip
+VITE_API_TIMEOUT=30000
+```
+
+- **VITE_API_BASE_URL**: base da API  
+- **VITE_API_TIMEOUT**: timeout em ms (ex.: 30s)
+
+---
+
+## 2) Cliente Axios com interceptors
+`src/services/api/client.ts`
+
+```ts
+import axios, { AxiosError, AxiosInstance } from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://abitus-api.geia.vip';
 const API_TIMEOUT = Number(import.meta.env.VITE_API_TIMEOUT) || 30000;
 
-class ApiClient {
-  private instance: AxiosInstance;
-
-  constructor() {
-    this.instance = axios.create({
-      baseURL: API_BASE_URL,
-      timeout: API_TIMEOUT,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    this.setupInterceptors();
-  }
-
-  private setupInterceptors(): void {
-    // Request interceptor
-    this.instance.interceptors.request.use(
-      (config) => {
-        config.params = {
-          ...config.params,
-          _t: Date.now(),
-        };
-        return config;
-      },
-      (error) => Promise.reject(error)
-    );
-
-    // Response interceptor
-    this.instance.interceptors.response.use(
-      (response) => response,
-      (error: AxiosError) => {
-        this.handleError(error);
-        return Promise.reject(error);
-      }
-    );
-  }
-
-  private handleError(error: AxiosError): void {
-    if (error.response) {
-      switch (error.response.status) {
-        case 400:
-          toast.error('Dados inválidos. Verifique as informações.');
-          break;
-        case 404:
-          toast.error('Recurso não encontrado.');
-          break;
-        case 500:
-          toast.error('Erro no servidor. Tente novamente mais tarde.');
-          break;
-        default:
-          toast.error('Ocorreu um erro. Tente novamente.');
-      }
-    } else if (error.request) {
-      toast.error('Sem conexão com o servidor.');
-    } else {
-      toast.error('Erro ao processar requisição.');
-    }
-  }
-
-  public getInstance(): AxiosInstance {
-    return this.instance;
-  }
+function getAccessToken(): string | null {
+  // implemente conforme sua estratégia (ex.: Zustand/Context/Storage seguro)
+  return null;
 }
 
-export const apiClient = new ApiClient().getInstance();
+export const apiClient: AxiosInstance = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: API_TIMEOUT,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+// Authorization condicional
+apiClient.interceptors.request.use((config) => {
+  const token = getAccessToken();
+  if (token) {
+    config.headers = config.headers ?? {};
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Tratamento centralizado de erros
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error: AxiosError) => {
+    // Aqui você pode inspecionar status e disparar refresh-token se necessário
+    // if (error.response?.status === 401) { ... }
+    return Promise.reject(error);
+  }
+);
 ```
 
-### 1.2 Endpoints
+---
 
-```typescript
-// src/services/api/endpoints.ts
+## 3) Mapa de endpoints
+`src/services/api/endpoints.ts`
 
+```ts
 export const API_ENDPOINTS = {
-  PERSONS: {
-    LIST: '/pessoas',
-    DETAIL: (id: string) => `/pessoas/${id}`,
-    SEARCH: '/pessoas/search',
-    FILTER: '/pessoas/filter',
+  AUTH: {
+    LOGIN: '/v1/login',
+    REFRESH: '/v1/refresh-token'
   },
-  REPORTS: {
-    CREATE: '/avistamentos',
-    STATUS: (id: string) => `/avistamentos/${id}`,
-    LIST_BY_PERSON: (personId: string) => `/avistamentos/pessoa/${personId}`,
+  OCORRENCIAS: {
+    INFO_LIST: '/v1/ocorrencias/informacoes-desaparecido',       // GET ?ocorrenciaId=
+    INFO_CREATE: '/v1/ocorrencias/informacoes-desaparecido',     // POST (query + multipart)
+    MOTIVOS: '/v1/ocorrencias/motivos',
+    DD_VERIFICAR: '/v1/ocorrencias/delegacia-digital/verificar-duplicidade',
+    DD_CRIAR: '/v1/ocorrencias/delegacia-digital'
   },
-  STATISTICS: {
-    GENERAL: '/estatisticas',
-    BY_CITY: (city: string) => `/estatisticas/cidade/${city}`,
-    BY_STATE: (state: string) => `/estatisticas/estado/${state}`,
-  },
-  UTILS: {
-    CITIES: '/cidades',
-    STATES: '/estados',
-    UPLOAD: '/upload/foto',
-  },
+  PESSOAS: {
+    DETALHE: (id: number | string) => `/v1/pessoas/${id}`,
+    ABERTO_FILTRO: '/v1/pessoas/aberto/filtro',
+    ABERTO_ESTATISTICO: '/v1/pessoas/aberto/estatistico',
+    ABERTO_DINAMICO: '/v1/pessoas/aberto/dinamico'
+  }
 } as const;
 ```
 
 ---
 
-## 2. Serviços
+## 4) Serviços de Pessoas
+`src/services/personService.ts`
 
-### 2.1 Serviço de Pessoas
-
-```typescript
-// src/services/personService.ts
+```ts
 import { apiClient } from '@/services/api/client';
 import { API_ENDPOINTS } from '@/services/api/endpoints';
-import type { Person, PaginatedResponse, SearchParams } from '@/types';
-import { apiToPerson } from '@/utils/transformers';
 
-export const personService = {
-  async list(params: SearchParams): Promise<PaginatedResponse<Person>> {
-    const response = await apiClient.get(API_ENDPOINTS.PERSONS.LIST, { params });
-    return {
-      ...response.data,
-      content: response.data.content.map(apiToPerson),
-    };
-  },
-  async getById(id: string): Promise<Person> {
-    const response = await apiClient.get(API_ENDPOINTS.PERSONS.DETAIL(id));
-    return apiToPerson(response.data);
-  },
-  async search(query: string, params?: SearchParams): Promise<PaginatedResponse<Person>> {
-    const response = await apiClient.get(API_ENDPOINTS.PERSONS.SEARCH, {
-      params: { q: query, ...params },
-    });
-    return {
-      ...response.data,
-      content: response.data.content.map(apiToPerson),
-    };
-  },
-  async filter(filters: SearchParams): Promise<PaginatedResponse<Person>> {
-    const response = await apiClient.post(API_ENDPOINTS.PERSONS.FILTER, filters);
-    return {
-      ...response.data,
-      content: response.data.content.map(apiToPerson),
-    };
-  },
-};
-```
+export type Sexo = 'MASCULINO' | 'FEMININO';
+export type StatusPessoa = 'DESAPARECIDO' | 'LOCALIZADO';
 
-### 2.2 Serviço de Reports/Avistamentos
+export interface FiltroParams {
+  nome?: string;
+  faixaIdadeInicial?: number;
+  faixaIdadeFinal?: number;
+  sexo?: Sexo;
+  pagina?: number;     // 0-based
+  porPagina?: number;  // ex.: 10
+  status?: StatusPessoa;
+}
 
-```typescript
-// src/services/reportService.ts
-import { apiClient } from '@/services/api/client';
-import { API_ENDPOINTS } from '@/services/api/endpoints';
-import type { ReportInput, ReportResponse } from '@/types';
+export async function getPessoaById(id: number | string) {
+  const { data } = await apiClient.get(API_ENDPOINTS.PESSOAS.DETALHE(id));
+  return data; // tipar conforme seu modelo Person
+}
 
-export const reportService = {
-  async create(data: ReportInput): Promise<ReportResponse> {
-    let photoUrls: string[] = [];
-    if (data.fotos && data.fotos.length > 0) {
-      photoUrls = await this.uploadPhotos(data.fotos);
-    }
-    const payload = { ...data, fotos: photoUrls };
-    const response = await apiClient.post(API_ENDPOINTS.REPORTS.CREATE, payload);
-    return response.data;
-  },
-  async uploadPhotos(files: File[]): Promise<string[]> {
-    const uploadPromises = files.map(async (file) => {
-      const formData = new FormData();
-      formData.append('file', file);
-      const response = await apiClient.post(API_ENDPOINTS.UTILS.UPLOAD, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      return response.data.url;
-    });
-    return Promise.all(uploadPromises);
-  },
-  async getStatus(id: string): Promise<ReportResponse> {
-    const response = await apiClient.get(API_ENDPOINTS.REPORTS.STATUS(id));
-    return response.data;
-  },
-  async listByPerson(personId: string) {
-    const response = await apiClient.get(API_ENDPOINTS.REPORTS.LIST_BY_PERSON(personId));
-    return response.data;
-  },
-};
-```
+export async function listPessoas(params: FiltroParams) {
+  const { data } = await apiClient.get(API_ENDPOINTS.PESSOAS.ABERTO_FILTRO, { params });
+  return data; // retorno paginado da API
+}
 
----
+export async function getPessoasEstatistico() {
+  const { data } = await apiClient.get(API_ENDPOINTS.PESSOAS.ABERTO_ESTATISTICO);
+  return data;
+}
 
-## 3. React Query Hooks
-
-### 3.1 Hook para Pessoas
-
-```typescript
-// src/hooks/usePersons.ts
-import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
-import { personService } from '@/services/personService';
-import type { SearchParams } from '@/types';
-
-export const usePersons = (params: SearchParams) => useQuery({
-  queryKey: ['persons', params],
-  queryFn: () => personService.list(params),
-  staleTime: 5 * 60 * 1000,
-});
-
-export const usePersonById = (id: string) => useQuery({
-  queryKey: ['person', id],
-  queryFn: () => personService.getById(id),
-  enabled: !!id,
-  staleTime: 10 * 60 * 1000,
-});
-
-export const useInfinitePersons = (params: SearchParams) => useInfiniteQuery({
-  queryKey: ['persons-infinite', params],
-  queryFn: ({ pageParam = 0 }) => personService.list({ ...params, page: pageParam }),
-  getNextPageParam: (lastPage) => lastPage.last ? undefined : lastPage.number + 1,
-  staleTime: 5 * 60 * 1000,
-});
-```
-
-### 3.2 Hook para Reports
-
-```typescript
-// src/hooks/useReports.ts
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
-import toast from 'react-hot-toast';
-import { reportService } from '@/services/reportService';
-import type { ReportInput } from '@/types';
-
-export const useCreateReport = () => {
-  const navigate = useNavigate();
-  return useMutation({
-    mutationFn: (data: ReportInput) => reportService.create(data),
-    onSuccess: (response) => {
-      toast.success('Avistamento reportado com sucesso!');
-      navigate(`/protocolo/${response.protocolo}`);
-    },
-    onError: () => {
-      toast.error('Erro ao enviar avistamento. Tente novamente.');
-    },
+export async function getPessoasDinamico(registros = 4) {
+  const { data } = await apiClient.get(API_ENDPOINTS.PESSOAS.ABERTO_DINAMICO, {
+    params: { registros }
   });
-};
-
-export const useReportStatus = (id: string) => useQuery({
-  queryKey: ['report-status', id],
-  queryFn: () => reportService.getStatus(id),
-  enabled: !!id,
-  refetchInterval: 30000,
-});
+  return data;
+}
 ```
 
 ---
 
-## 4. Tratamento de Erros
+## 5) Serviços de Ocorrências
 
-### 4.1 Error Boundary Global
+### 5.1 Listar informações/anexos da ocorrência
+`src/services/occurrenceService.ts`
+```ts
+import { apiClient } from '@/services/api/client';
+import { API_ENDPOINTS } from '@/services/api/endpoints';
 
-```typescript
-// src/components/common/ErrorBoundary.tsx
-import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { AlertTriangle } from 'lucide-react';
+export async function listInfoOcorrencia(ocorrenciaId: number) {
+  const { data } = await apiClient.get(API_ENDPOINTS.OCORRENCIAS.INFO_LIST, {
+    params: { ocorrenciaId }
+  });
+  return data;
+}
+```
 
-interface Props { children: ReactNode; }
-interface State { hasError: boolean; error?: Error; }
+### 5.2 Enviar informação + fotos (multipart + query)
+```ts
+import { apiClient } from '@/services/api/client';
+import { API_ENDPOINTS } from '@/services/api/endpoints';
 
-export class ErrorBoundary extends Component<Props, State> {
-  public state: State = { hasError: false };
-  public static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
-  }
-  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Uncaught error:', error, errorInfo);
-  }
-  public render() {
-    if (this.state.hasError) {
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-          <div className="text-center p-8">
-            <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Ops! Algo deu errado</h1>
-            <p className="text-gray-600 mb-4">Erro inesperado. Recarregue a página.</p>
-            <button onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-              Recarregar Página
-            </button>
-          </div>
-        </div>
-      );
+export interface CreateInfoParams {
+  informacao: string;     // query
+  descricao: string;      // query
+  data: string;           // query -> yyyy-MM-dd
+  ocoId: number;          // query
+  files: File[];          // body -> multipart: files[]
+}
+
+export async function createInfoOcorrencia(p: CreateInfoParams) {
+  const fd = new FormData();
+  (p.files ?? []).forEach((f) => fd.append('files', f)); // nome do campo: "files"
+
+  const { data } = await apiClient.post(
+    API_ENDPOINTS.OCORRENCIAS.INFO_CREATE,
+    fd,
+    {
+      params: {
+        informacao: p.informacao,
+        descricao: p.descricao,
+        data: p.data,
+        ocoId: p.ocoId
+      },
+      headers: { 'Content-Type': 'multipart/form-data' }
     }
-    return this.props.children;
-  }
+  );
+  return data;
+}
+```
+
+### 5.3 Motivos, verificação e criação (Delegacia Digital) — (opcional/fora do escopo do desafio)
+```ts
+export async function getMotivos() {
+  const { data } = await apiClient.get(API_ENDPOINTS.OCORRENCIAS.MOTIVOS);
+  return data;
+}
+
+export async function verificarDuplicidade(payload: Record<string, unknown>) {
+  const { data } = await apiClient.post(API_ENDPOINTS.OCORRENCIAS.DD_VERIFICAR, payload);
+  return data;
+}
+
+export async function criarOcorrenciaDigital(payload: Record<string, unknown>) {
+  const { data } = await apiClient.post(API_ENDPOINTS.OCORRENCIAS.DD_CRIAR, payload);
+  return data;
 }
 ```
 
 ---
 
-## 5. Otimizações
+## 6) Hooks do React Query
 
-### 5.1 Debounce para Busca
+### `src/hooks/usePersons.ts`
+```ts
+import { useQuery } from '@tanstack/react-query';
+import { getPessoaById, listPessoas, FiltroParams, getPessoasEstatistico, getPessoasDinamico } from '@/services/personService';
 
-```typescript
-// src/hooks/useDebounce.ts
-import { useEffect, useState } from 'react';
-
-export function useDebounce<T>(value: T, delay: number = 500): T {
-  const [debouncedValue, setDebouncedValue] = useState<T>(value);
-  useEffect(() => {
-    const handler = setTimeout(() => setDebouncedValue(value), delay);
-    return () => clearTimeout(handler);
-  }, [value, delay]);
-  return debouncedValue;
+export function usePessoa(id: number | string) {
+  return useQuery({
+    queryKey: ['pessoa', id],
+    queryFn: () => getPessoaById(id),
+    enabled: !!id,
+    staleTime: 10 * 60 * 1000
+  });
 }
 
-// Uso
-const SearchBar = () => {
-  const [search, setSearch] = useState('');
-  const debouncedSearch = useDebounce(search, 500);
-  const { data } = usePersons({ nome: debouncedSearch });
-};
+export function usePessoas(params: FiltroParams) {
+  return useQuery({
+    queryKey: ['pessoas', params],
+    queryFn: () => listPessoas(params),
+    staleTime: 5 * 60 * 1000
+  });
+}
+
+export function usePessoasEstatistico() {
+  return useQuery({
+    queryKey: ['pessoas-estatistico'],
+    queryFn: getPessoasEstatistico,
+    staleTime: 5 * 60 * 1000
+  });
+}
+
+export function usePessoasDinamico(registros = 4) {
+  return useQuery({
+    queryKey: ['pessoas-dinamico', registros],
+    queryFn: () => getPessoasDinamico(registros),
+    staleTime: 5 * 60 * 1000
+  });
+}
 ```
 
-### 5.2 Cache e Prefetch
+### `src/hooks/useOccurrence.ts`
+```ts
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { createInfoOcorrencia, listInfoOcorrencia, CreateInfoParams } from '@/services/occurrenceService';
+import toast from 'react-hot-toast';
 
-```typescript
-// src/hooks/usePrefetch.ts
-import { useQueryClient } from '@tanstack/react-query';
-import { personService } from '@/services/personService';
+export function useListInfoOcorrencia(ocorrenciaId: number) {
+  return useQuery({
+    queryKey: ['occurrence-info', ocorrenciaId],
+    queryFn: () => listInfoOcorrencia(ocorrenciaId),
+    enabled: !!ocorrenciaId
+  });
+}
 
-export const usePrefetchPerson = () => {
-  const queryClient = useQueryClient();
-  return async (id: string) => {
-    await queryClient.prefetchQuery({
-      queryKey: ['person', id],
-      queryFn: () => personService.getById(id),
-      staleTime: 10 * 60 * 1000,
-    });
+export function useCreateInfoOcorrencia() {
+  return useMutation({
+    mutationFn: (payload: CreateInfoParams) => createInfoOcorrencia(payload),
+    onSuccess: () => toast.success('Informação enviada com sucesso!'),
+    onError: () => toast.error('Não foi possível enviar. Tente novamente.')
+  });
+}
+```
+
+---
+
+## 7) Validações de upload (front)
+- Tipos permitidos: image/jpeg, image/png, image/webp  
+- Tamanho máximo: 5MB por arquivo  
+- Quantidade: até 3 fotos  
+
+Exemplo com **Zod**:
+
+```ts
+import { z } from 'zod';
+
+export const reportSchema = z.object({
+  informacao: z.string().min(10, 'Descreva o avistamento com mais detalhes'),
+  descricao: z.string().min(3, 'Informe um título/descrição do anexo'),
+  data: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use o formato yyyy-MM-dd'),
+  ocoId: z.coerce.number().int().positive(),
+  files: z.array(z.custom<File>()).max(3)
+    .refine(arr => arr.every(f => ['image/jpeg','image/png','image/webp'].includes(f.type)),
+      'Apenas JPG, PNG ou WebP')
+    .refine(arr => arr.every(f => f.size <= 5 * 1024 * 1024),
+      'Cada foto deve ter no máximo 5MB')
+});
+export type ReportFormData = z.infer<typeof reportSchema>;
+```
+
+---
+
+## 8) Exemplos de uso na UI
+
+### 8.1 Enviar reporte com fotos
+```ts
+import { useCreateInfoOcorrencia } from '@/hooks/useOccurrence';
+
+function ReportForm() {
+  const { mutate: send, isLoading } = useCreateInfoOcorrencia();
+  // capture valores via RHF
+  const onSubmit = (values: { informacao: string; descricao: string; data: string; ocoId: number; files: File[] }) => {
+    send(values);
   };
-};
+  // ...
+}
 ```
+
+### 8.2 Listar pessoas paginado (10 por página)
+```ts
+import { usePessoas } from '@/hooks/usePersons';
+
+function Home() {
+  const { data, isLoading } = usePessoas({ pagina: 0, porPagina: 10, status: 'DESAPARECIDO' });
+  // renderize grid + paginação com base em data.content / data.totalPages
+}
+```
+
+---
+
+## 9) Tratamento de erros (UX)
+- **Falha de rede/timeouts**: mensagem “Sem conexão com o servidor”  
+- **4xx (validação)**: mostrar feedback por campo (telefone/data/arquivos)  
+- **5xx**: mensagem genérica e opção “Tentar novamente”  
+- **Persistência do formulário**: manter os dados preenchidos ao falhar

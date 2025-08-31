@@ -1,150 +1,135 @@
-# Arquitetura do Sistema - BuscaVivaMT  
+# Arquitetura do Sistema - BuscaVivaMT
 
-Este documento descreve a arquitetura do sistema BuscaViva, focando na estrutura do frontend e sua interação com a API externa pública. Nosso objetivo é construir um frontend robusto, escalável e de fácil manutenção.
+Este documento descreve a arquitetura do sistema **BuscaVivaMT**, com foco na estrutura do frontend e sua interação com a API externa pública disponibilizada pela Polícia Judiciária Civil do Estado de Mato Grosso.
 
-## 1. Visão Geral da Arquitetura
+---
 
-O BuscaViva é uma **Single Page Application (SPA) React** que se comunica diretamente com uma API pública externa.
+## 1. Visão Geral
+
+O BuscaVivaMT é uma **Single Page Application (SPA)** desenvolvida em **React + TypeScript**, comunicando-se diretamente com a API oficial `https://abitus-api.geia.vip`.
 
 ```mermaid
 graph LR
-    User --> Frontend[BuscaViva SPA]
-    Frontend --> ExternalAPI[API Pública Externa]
-    ExternalAPI --> Database[Banco de Dados da API Externa]
+    User[👤 Cidadão] --> Frontend[BuscaViva SPA]
+    Frontend --> API[(API PJC-MT)]
+    API --> Database[(Banco de Dados da PJC)]
 ```
 
-**Explicação:**
-
-- **User:** Representa o cidadão que acessa e interage com o sistema.  
-- **Frontend (BuscaViva SPA):** É a aplicação que estamos construindo. Responsável pela interface do usuário, lógica de apresentação e comunicação com a API externa.  
-- **External API (API Pública Externa):** API já existente e fornecida pela Polícia Judiciária Civil de Mato Grosso.  
-- **Database (Banco de Dados da API Externa):** Banco gerenciado pela API externa (fora do escopo do frontend).  
+**User**: qualquer cidadão acessando a aplicação.  
+**Frontend**: nossa SPA (UI, estado, validação, acessibilidade, segurança).  
+**API PJC-MT**: fornece dados de pessoas desaparecidas e recebe informações/avistamentos.  
+**Database**: gerenciado pela própria PJC, fora do escopo.
 
 ---
 
 ## 2. Stack Tecnológica
-
-**Frontend**
-
-- Framework: React 18.x  
-- Linguagem: TypeScript  
-- UI Library: Tailwind CSS  
-- Gerenciamento de Estado (Local): React Context API / useState  
-- Gerenciamento de Estado (Servidor): TanStack Query (cache/sincronização com API)  
-- Roteamento: React Router v6  
-- Formulários: React Hook Form + Zod  
-- HTTP Client: Axios  
-- Mapas: Leaflet + React-Leaflet  
-- Build Tool: Vite  
-- Containerização: Docker (deployment do frontend)  
+- Framework: React 18
+- Linguagem: TypeScript
+- Estilização: Tailwind CSS
+- Roteamento: React Router v6 (Lazy Loading)
+- Gerenciamento de estado servidor: TanStack Query
+- Formulários: React Hook Form + Zod
+- HTTP Client: Axios
+- Mapas: Leaflet + React-Leaflet
+- Build Tool: Vite
+- Containerização: Docker + Nginx
 
 ---
 
 ## 3. Estrutura de Pastas
 
-A arquitetura do código seguirá o modelo **Feature-Based**, com camadas para reutilização e separação de responsabilidades.
-
-```
+```cpp
 buscaviva/
 ├── src/
-│   ├── assets/       # Imagens, fontes, ícones (locais)
-│   ├── components/   # Componentes reutilizáveis (UI genérica)
-│   │   ├── common/   # Componentes globais (Header, Footer)
-│   │   ├── ui/       # Componentes básicos (Button, Input)
-│   ├── features/     # Funcionalidades (PersonCard, ReportForm, SearchBar)
-│   │   ├── auth/     # (Se houver autenticação no futuro)
-│   ├── hooks/        # Custom hooks globais (useDebounce, useApi)
-│   ├── lib/          # Configurações de libs (axios, react-query)
-│   ├── pages/        # Páginas/Rotas (Home, PersonDetail, NotFound)
-│   ├── services/     # Serviços de API (clients, endpoints)
-│   ├── store/        # Estado global (Context/Zustand, se necessário)
-│   ├── styles/       # Estilos globais (Tailwind CSS)
-│   ├── types/        # Tipos TypeScript (interfaces API/frontend)
-│   ├── utils/        # Funções utilitárias (formatadores, validadores)
-│   ├── App.tsx       # Componente raiz
-│   └── main.tsx      # Entry point
-├── public/           # Arquivos estáticos
-├── docs/             # Documentação
-├── tests/            # Configuração/utilitários de testes
-├── .env.example      # Exemplo variáveis ambiente
-├── .eslintrc.cjs     # ESLint config
-├── .gitignore        # Ignore Git
-├── index.html        # HTML principal
-├── package.json      # Dependências e scripts
-├── README.md         # Documentação repositório
-├── tailwind.config.js# Configuração Tailwind
-├── tsconfig.json     # Configuração TypeScript
-├── vite.config.ts    # Configuração Vite
-└── Dockerfile        # Configuração Docker
+│   ├── assets/        # imagens, ícones
+│   ├── components/    # componentes UI globais
+│   ├── features/      # funcionalidades (Home, Detalhe, ReportForm)
+│   ├── hooks/         # custom hooks (useDebounce, useAuth)
+│   ├── lib/           # configs (axios, react-query)
+│   ├── pages/         # páginas/rotas
+│   ├── services/      # chamadas à API (personService, reportService)
+│   ├── styles/        # estilos globais
+│   ├── types/         # interfaces TS
+│   └── utils/         # formatadores e helpers
+├── public/            # arquivos estáticos
+├── docs/              # documentação
+├── tests/             # testes unitários/e2e
+├── .env.example       # variáveis ambiente
+├── Dockerfile         # build container
+└── ...
 ```
 
 ---
 
-## 4. Gerenciamento de Estado
+## 4. Fluxo de Dados
 
-- **Estado do Servidor (Server State):** Gerenciado por **TanStack Query** (React Query), incluindo caching, revalidação, sincronização e tratamento de erros.  
-- **Estado da UI (Client State):** Estados simples e globais (tema, configs) via **React Context API** ou `useState`.  
-
----
-
-## 5. Fluxo de Dados (Exemplo)
-
-### Consulta de Pessoas (Home Page)
-
+### 4.1 Consulta de Pessoas (Home)
 ```mermaid
 sequenceDiagram
-    participant User
-    participant Browser
-    participant Frontend[BuscaViva SPA]
-    participant ExternalAPI[API Pública Externa]
-
-    User->>Browser: Acessa buscaviva.mt.gov.br
-    Browser->>Frontend: Carrega SPA
-    Frontend->>ExternalAPI: GET /pessoas (com filtros/paginação)
-    ExternalAPI-->>Frontend: Retorna lista de pessoas
-    Frontend->>Browser: Exibe cards
-    User->>Frontend: Interage (busca/filtra/navega página)
-    Frontend->>ExternalAPI: Nova GET /pessoas
-    ExternalAPI-->>Frontend: Retorna nova lista
-    Frontend->>Browser: Atualiza exibição
+    User->>Frontend: Acessa Home
+    Frontend->>API: GET /v1/pessoas/aberto/filtro?pagina=0&porPagina=10
+    API-->>Frontend: Lista paginada
+    Frontend-->>User: Exibe cards + paginação
 ```
 
-### Reporte de Avistamento (Formulário)
-
+### 4.2 Detalhe de Pessoa
 ```mermaid
 sequenceDiagram
-    participant User
-    participant Browser
-    participant Frontend[BuscaViva SPA]
-    participant ExternalAPI[API Pública Externa]
-    participant CloudStorage[Armazenamento de Imagens]
+    User->>Frontend: Clica em pessoa
+    Frontend->>API: GET /v1/pessoas/{id}
+    API-->>Frontend: Dados completos
+    Frontend-->>User: Mostra detalhe + status
+```
 
-    User->>Frontend: Preenche formulário
-    User->>Frontend: Anexa fotos (se houver)
-    Frontend->>CloudStorage: Upload fotos (multipart)
-    CloudStorage-->>Frontend: Retorna URLs
-    Frontend->>ExternalAPI: POST /avistamentos (dados + fotos)
-    ExternalAPI-->>Frontend: Retorna confirmação/erro
-    Frontend->>Browser: Exibe sucesso/erro
+### 4.3 Reportar Avistamento (multipart direto)
+```mermaid
+sequenceDiagram
+    User->>Frontend: Preenche formulário (informacao, descricao, data, ocoId, fotos)
+    Frontend->>API: POST /v1/ocorrencias/informacoes-desaparecido
+        Query: informacao, descricao, data, ocoId
+        Body: multipart/form-data (files[])
+    API-->>Frontend: Confirmação de recebimento
+    Frontend-->>User: Mensagem de sucesso
 ```
 
 ---
 
-## 6. Segurança
-
-Medidas adotadas:
-
-- **HTTPS:** Todas as comunicações via HTTPS.  
-- **Validação de Input:** Prevenção de envio de dados inválidos/maliciosos.  
-- **XSS Prevention:** React protege contra XSS por padrão; evitar `dangerouslySetInnerHTML`.  
-- **Sanitização:** Sanitizar dados recebidos da API antes da renderização.  
-- **Upload de Arquivos:** Validação de tipo/tamanho antes do upload.  
-- **Controles de Cache:** Uso de headers + TanStack Query para evitar re-fetching desnecessário.  
-- **Privacidade:** Sem armazenamento local de dados sensíveis.  
+## 5. Segurança
+- HTTPS only
+- CSP restrita (conexão apenas com abitus-api.geia.vip)
+- Permissions-Policy: geolocation=(self)
+- Validação de entrada: Zod + máscaras (telefone, datas)
+- Upload: validação de tipo/tamanho antes do FormData
+- Privacidade: não persistir dados pessoais no front
 
 ---
 
-## 7. Deployment
+## 6. Deployment
+- Build: `vite build` → artefatos estáticos (/dist)
+- Container: Docker multi-stage
+- Servidor: Nginx, SPA fallback + headers de segurança
 
-- **Estratégia:** Docker + Nginx para servir build otimizado do React.  
-- **CI/CD:** GitHub Actions para build, testes e deploy contínuo.  
+**Exemplo de nginx.conf:**
+```nginx
+server {
+  listen 80;
+  root /usr/share/nginx/html;
+
+  location / {
+    try_files $uri /index.html;
+  }
+
+  add_header X-Frame-Options "SAMEORIGIN";
+  add_header X-Content-Type-Options "nosniff";
+  add_header Referrer-Policy "strict-origin-when-cross-origin";
+  add_header Permissions-Policy "geolocation=(self)" always;
+
+  add_header Content-Security-Policy "default-src 'self';
+    connect-src 'self' https://abitus-api.geia.vip;
+    img-src 'self' data:;
+    style-src 'self' 'unsafe-inline';
+    script-src 'self';
+    font-src 'self' data:;
+    frame-ancestors 'none';";
+}
+```
