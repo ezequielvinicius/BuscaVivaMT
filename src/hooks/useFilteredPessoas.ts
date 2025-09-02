@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
-import { usePessoas } from './usePessoas'
+import { useQuery } from '@tanstack/react-query'
+import { listPessoasAll } from '@/services/personService'
 import type { FiltroParams } from '@/types/api'
 import type { PersonListItem } from '@/types/person'
 
@@ -20,70 +21,68 @@ interface FilteredResult {
 }
 
 export function useFilteredPessoas(filters: FiltroParams): FilteredResult {
-  // Para contornar as "pegadinhas", vamos buscar TODOS os dados do backend
-  // e aplicar os filtros problemáticos no frontend
+  // Remove status/paginação do servidor; vamos filtrar e paginar no front
   const backendFilters = useMemo(() => {
-    // Remove apenas o filtro de STATUS (principal pegadinha)
-    // e remove paginação para buscar todos os resultados
     const { status, pagina, porPagina, ...rest } = filters
-    
-    // Usa paginação grande para pegar mais resultados
-    return {
-      ...rest,
-      pagina: 0,
-      porPagina: 1000 // Busca uma quantidade maior
-    }
+    return { ...rest }
   }, [filters])
 
-  const { data, isLoading, isError, error } = usePessoas(backendFilters)
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ['pessoas-all', backendFilters],
+    queryFn: () => listPessoasAll(backendFilters),
+    staleTime: 2 * 60 * 1000,
+  })
 
   const filteredResult = useMemo(() => {
-    // Mapeia a resposta da API para o formato correto
     const originalList = data?.content ?? []
-    
-    // Converte para o formato PersonListItem correto
-    const mappedList = originalList.map((pessoa: any) => ({
+
+    // Mapeia para o formato PersonListItem
+    const mappedList: PersonListItem[] = originalList.map((pessoa: any) => ({
       id: pessoa.id,
       nome: pessoa.nome,
       idade: pessoa.idade,
       sexo: pessoa.sexo,
-      status: pessoa.vivo === false ? 'LOCALIZADO' : 'DESAPARECIDO', // Mapeia vivo -> status
+      status: pessoa.vivo === false ? 'LOCALIZADO' : 'DESAPARECIDO',
       fotoPrincipal: pessoa.urlFoto,
       cidade: pessoa.ultimaOcorrencia?.localDesaparecimentoConcat || '',
-      dataDesaparecimento: pessoa.ultimaOcorrencia?.dtDesaparecimento
+      dataDesaparecimento: pessoa.ultimaOcorrencia?.dtDesaparecimento,
     }))
-    
+
     let filteredList = [...mappedList]
-    
-    // ===== FILTROS FRONTEND (para contornar pegadinhas da API) =====
-    
-    // Filtro de status (principal pegadinha da API)
+
+    // Filtro de status (feito no front para contornar a API)
     if (filters.status) {
-      filteredList = filteredList.filter(pessoa => {
-        if (filters.status === 'DESAPARECIDO') {
-          return pessoa.status === 'DESAPARECIDO'
-        } else if (filters.status === 'LOCALIZADO') {
-          return pessoa.status === 'LOCALIZADO'
-        }
-        return true
-      })
+      filteredList = filteredList.filter(p => p.status === filters.status)
+    }
+    if (filters.sexo) {
+      filteredList = filteredList.filter(p => p.sexo === filters.sexo)
+    }
+    if (filters.faixaIdadeInicial !== undefined) {
+      filteredList = filteredList.filter(p => (p.idade ?? 0) >= filters.faixaIdadeInicial!)
+    }
+    if (filters.faixaIdadeFinal !== undefined) {
+      filteredList = filteredList.filter(p => (p.idade ?? 0) <= filters.faixaIdadeFinal!)
+    }
+    if (filters.nome?.trim()) {
+      const q = filters.nome.trim().toLowerCase()
+      filteredList = filteredList.filter(p => p.nome.toLowerCase().includes(q))
     }
 
-    // ===== PAGINAÇÃO MANUAL =====
+    // Paginação manual
     const itemsPerPage = filters.porPagina ?? 10
     const currentPage = filters.pagina ?? 0
     const totalFiltered = filteredList.length
     const totalPages = Math.ceil(totalFiltered / itemsPerPage)
-    
+
     const start = currentPage * itemsPerPage
     const end = start + itemsPerPage
     const paginatedList = filteredList.slice(start, end)
 
-    // ===== ESTATÍSTICAS =====
+    // Estatísticas
     const hasActiveFilters = Boolean(
-      filters.status || 
-      filters.sexo || 
-      filters.faixaIdadeInicial !== undefined || 
+      filters.status ||
+      filters.sexo ||
+      filters.faixaIdadeInicial !== undefined ||
       filters.faixaIdadeFinal !== undefined ||
       filters.nome?.trim()
     )
@@ -91,7 +90,7 @@ export function useFilteredPessoas(filters: FiltroParams): FilteredResult {
     const filterStats = {
       total: mappedList.length,
       filtered: totalFiltered,
-      percentageFiltered: mappedList.length > 0 
+      percentageFiltered: mappedList.length > 0
         ? Math.round((totalFiltered / mappedList.length) * 100)
         : 0
     }
@@ -102,7 +101,7 @@ export function useFilteredPessoas(filters: FiltroParams): FilteredResult {
       totalPages,
       hasActiveFilters,
       filterStats,
-      originalTotalElements: data?.totalElements ?? mappedList.length
+      originalTotalElements: mappedList.length,
     }
   }, [data, filters])
 
@@ -110,6 +109,6 @@ export function useFilteredPessoas(filters: FiltroParams): FilteredResult {
     ...filteredResult,
     isLoading,
     isError,
-    error
+    error,
   }
 }

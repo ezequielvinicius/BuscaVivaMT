@@ -1,28 +1,124 @@
 import { api } from '@/lib/api/client'
 import { API_ENDPOINTS } from '@/lib/api/endpoints'
 import type { FiltroParams } from '@/types/api'
-import type { PaginatedResponse, PersonListItem } from '@/types/person'
+import type { APIPersonResponse, PaginatedResponse, PersonListItem } from '@/types/person'
 
-export async function listPessoas(params: FiltroParams): Promise<PaginatedResponse<PersonListItem>> {
-  try {
-    // Remove apenas valores realmente vazios, mantém 0 como válido
-    const cleanParams = Object.entries(params).reduce((acc, [key, value]) => {
-      if (value !== undefined && value !== null && value !== '') {
-        acc[key] = value;
-      }
-      return acc;
-    }, {} as Record<string, any>);
+export type InfoOcorrencia = {
+  ocoId: number
+  informacao: string
+  data: string   // yyyy-MM-dd
+  id: number
+  anexos?: string[]
+}
 
-    console.log('Fazendo requisição com params:', cleanParams);
+export async function getInformacoesOcorrencia(ocorrenciaId: number) {
+  const { data } = await api.get<InfoOcorrencia[]>(
+    API_ENDPOINTS.OCORRENCIAS.INFO_LIST,
+    { params: { ocorrenciaId } }
+  )
+  return data
+}
 
-    const { data } = await api.get(API_ENDPOINTS.PESSOAS.ABERTO_FILTRO, { 
-      params: cleanParams 
-    });
-    
-    console.log('Resposta da API:', data);
-    return data;
-  } catch (error) {
-    console.error('Erro na requisição:', error);
-    throw error;
+export type CreateInfoPayload = {
+  informacao: string
+  descricao: string
+  data: string     // yyyy-MM-dd
+  ocoId: number
+  files?: File[]
+}
+
+export async function createInfoOcorrencia(p: CreateInfoPayload) {
+  const fd = new FormData()
+  for (const f of p.files ?? []) fd.append('files', f)
+  // query params: informacao, descricao, data, ocoId
+  const { data } = await api.post(
+    API_ENDPOINTS.OCORRENCIAS.INFO_CREATE,
+    fd,
+    { params: { informacao: p.informacao, descricao: p.descricao, data: p.data, ocoId: p.ocoId } }
+  )
+  return data
+}
+
+/** LISTA (uma página – usa paginação do backend) */
+export async function listPessoas(params: FiltroParams): Promise<PaginatedResponse<any>> {
+  const cleanParams = Object.entries(params).reduce((acc, [k, v]) => {
+    if (v !== undefined && v !== null && v !== '') acc[k] = v
+    return acc
+  }, {} as Record<string, any>)
+
+  const { data } = await api.get(API_ENDPOINTS.PESSOAS.ABERTO_FILTRO, { params: cleanParams })
+  return data
+}
+
+/** LISTA (TODAS as páginas – concatena tudo para filtrar no front) */
+export async function listPessoasAll(params: FiltroParams): Promise<PaginatedResponse<any>> {
+  // o backend limita porPagina a ~200, então varremos as páginas
+  const base = { ...params, pagina: 0, porPagina: 200 }
+  const first = await api
+    .get<PaginatedResponse<any>>(API_ENDPOINTS.PESSOAS.ABERTO_FILTRO, { params: base })
+    .then(r => r.data)
+
+  const pages = first.totalPages ?? 1
+  if (pages <= 1) return first
+
+  const rest = await Promise.all(
+    Array.from({ length: pages - 1 }, (_, i) =>
+      api
+        .get<PaginatedResponse<any>>(API_ENDPOINTS.PESSOAS.ABERTO_FILTRO, {
+          params: { ...base, pagina: i + 1 },
+        })
+        .then(r => r.data.content)
+    )
+  )
+
+  const content = first.content.concat(...rest)
+
+  // devolvemos um "paginado" com tudo em uma única página
+  return {
+    ...first,
+    content,
+    numberOfElements: content.length,
+    size: content.length,
+    totalPages: 1,
+    number: 0,
+    first: true,
+    last: true,
+    empty: content.length === 0,
   }
+}
+
+/** DETALHE */
+export async function getPessoa(id: string | number): Promise<{
+  pessoa: PersonListItem & {
+    cartazes?: { urlCartaz?: string; tipoCartaz?: string }[]
+    ocoId?: number
+    informacaoBreve?: string
+    localDesaparecimento?: string
+    dataLocalizacao?: string
+    encontradoVivo?: boolean
+    vestimentas?: string
+  }
+}> {
+  const { data } = await api.get<APIPersonResponse>(API_ENDPOINTS.PESSOAS.DETALHE(id))
+  const status = data.vivo === false ? 'LOCALIZADO' : 'DESAPARECIDO'
+
+  const pessoa = {
+    id: data.id,
+    nome: data.nome,
+    idade: data.idade,
+    sexo: data.sexo,
+    status,
+    fotoPrincipal: data.urlFoto,
+    cidade: data.ultimaOcorrencia?.localDesaparecimentoConcat || '',
+    dataDesaparecimento: data.ultimaOcorrencia?.dtDesaparecimento,
+    cartazes: data.ultimaOcorrencia?.listaCartaz,
+    ocoId: data.ultimaOcorrencia?.ocoId,
+    informacaoBreve: data.ultimaOcorrencia?.ocorrenciaEntrevDesapDTO?.informacao,
+    localDesaparecimento: data.ultimaOcorrencia?.localDesaparecimentoConcat,
+    dataLocalizacao: data.ultimaOcorrencia?.dataLocalizacao,
+    encontradoVivo: data.ultimaOcorrencia?.encontradoVivo ?? undefined,
+    vestimentas: data.ultimaOcorrencia?.ocorrenciaEntrevDesapDTO?.vestimentasDesaparecido
+  } as const
+
+  return { pessoa }
 }
