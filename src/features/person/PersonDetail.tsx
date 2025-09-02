@@ -1,11 +1,17 @@
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { StatusPill } from '@/components/ui/StatusPill'
 import { usePessoa } from '@/hooks/usePessoa'
+import { useInformacoesOcorrencia } from '@/hooks/useInformacoesOcorrencia'
+import { ReportForm } from '@/features/person/ReportForm'
 
 export default function PersonDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { data, isLoading, isError, error } = usePessoa(id)
+  const p = data?.pessoa
+  const { list: infos } = useInformacoesOcorrencia(p?.ocoId)
+  const [openForm, setOpenForm] = useState(false)
 
   if (isLoading) {
     return (
@@ -23,7 +29,7 @@ export default function PersonDetail() {
     )
   }
 
-  if (isError || !data?.pessoa) {
+  if (isError || !p) {
     return (
       <div className="p-6">
         <div className="p-6 bg-red-50 text-red-700 rounded-lg border border-red-200 space-y-2">
@@ -31,7 +37,7 @@ export default function PersonDetail() {
           <details className="text-xs text-red-700/80">
             <summary className="cursor-pointer">Ver detalhes técnicos</summary>
             <pre className="mt-2 whitespace-pre-wrap text-xs">
-              {String((error as any)?.message ?? 'null')}
+              {JSON.stringify((error as any)?.response?.data ?? (error as any)?.message ?? error, null, 2)}
             </pre>
           </details>
           <button onClick={() => navigate(-1)} className="text-sm underline mt-2">Voltar</button>
@@ -39,8 +45,6 @@ export default function PersonDetail() {
       </div>
     )
   }
-
-  const p = data.pessoa
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
@@ -90,9 +94,7 @@ export default function PersonDetail() {
             <h2 className="font-semibold mb-2">Dados do desaparecimento</h2>
             <ul className="text-sm text-gray-700 space-y-1">
               {p.localDesaparecimento && <li>📍 Local: {p.localDesaparecimento}</li>}
-              {p.dataDesaparecimento && (
-                <li>🗓️ Data: {new Date(p.dataDesaparecimento).toLocaleDateString('pt-BR')}</li>
-              )}
+              {p.dataDesaparecimento && <li>🗓️ Data: {new Date(p.dataDesaparecimento).toLocaleDateString('pt-BR')}</li>}
             </ul>
           </div>
 
@@ -100,16 +102,8 @@ export default function PersonDetail() {
           {(p.informacaoBreve || p.vestimentas) && (
             <div className="p-4 bg-white border rounded-xl">
               <h2 className="font-semibold mb-2">Observações</h2>
-              {p.informacaoBreve && (
-                <p className="text-sm text-gray-800">
-                  <strong>Última informação: </strong>{p.informacaoBreve}
-                </p>
-              )}
-              {p.vestimentas && (
-                <p className="text-sm text-gray-800 mt-1">
-                  <strong>Vestimentas: </strong>{p.vestimentas}
-                </p>
-              )}
+              {p.informacaoBreve && <p className="text-sm text-gray-800"><strong>Última informação: </strong>{p.informacaoBreve}</p>}
+              {p.vestimentas && <p className="text-sm text-gray-800 mt-1"><strong>Vestimentas: </strong>{p.vestimentas}</p>}
             </div>
           )}
 
@@ -119,13 +113,7 @@ export default function PersonDetail() {
               <h2 className="font-semibold mb-2">Cartazes</h2>
               <div className="flex flex-wrap gap-3">
                 {p.cartazes.map((c, i) => (
-                  <a
-                    key={i}
-                    href={c.urlCartaz}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="px-3 py-2 text-sm border rounded-lg hover:bg-gray-50"
-                  >
+                  <a key={i} href={c.urlCartaz} target="_blank" rel="noreferrer" className="px-3 py-2 text-sm border rounded-lg hover:bg-gray-50">
                     {c.tipoCartaz ?? 'Cartaz'} #{i + 1}
                   </a>
                 ))}
@@ -133,23 +121,64 @@ export default function PersonDetail() {
             </div>
           )}
 
+          {/* Seção: Informações compartilhadas */}
+          {typeof p.ocoId === 'number' && (
+            <div className="p-4 bg-white border rounded-xl">
+              <h2 className="font-semibold mb-2">Informações compartilhadas</h2>
+
+              {infos.isLoading && <p className="text-sm text-gray-500">Carregando informações…</p>}
+              {!infos.isLoading && (infos.data?.length ?? 0) === 0 && (
+                <p className="text-sm text-gray-600">Nenhuma informação enviada ainda.</p>
+              )}
+              {!infos.isLoading && (infos.data?.length ?? 0) > 0 && (
+                <ul className="space-y-3">
+                  {infos.data!.map((it) => (
+                    <li key={it.id} className="border rounded-lg p-3">
+                      <p className="text-sm text-gray-800">
+                        <strong>Data:</strong> {new Date(it.data).toLocaleDateString('pt-BR')}
+                      </p>
+                      {it.informacao && <p className="text-sm mt-1"><strong>Informação:</strong> {it.informacao}</p>}
+                      {!!it.anexos?.length && (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {it.anexos.map((url, i) => (
+                            <a key={i} href={url} target="_blank" rel="noreferrer" className="text-xs px-2 py-1 border rounded hover:bg-gray-50">
+                              Anexo {i + 1}
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
           {/* CTA */}
           <div className="pt-2">
             <button
               className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
-              onClick={() => {
-                const evt = new CustomEvent('open-report-form', { detail: { ocoId: p.ocoId, pessoaId: p.id } })
-                window.dispatchEvent(evt)
-              }}
-              disabled={!p.ocoId}
-              aria-disabled={!p.ocoId}
-              title={!p.ocoId ? 'Ocorrência não disponível para reporte' : 'Reportar informação'}
+              onClick={() => setOpenForm(true)}
+              disabled={typeof p.ocoId !== 'number'}
+              aria-disabled={typeof p.ocoId !== 'number'}
+              title={typeof p.ocoId !== 'number' ? 'Ocorrência não disponível para reporte' : 'Reportar informação'}
             >
               Tenho informações
             </button>
           </div>
         </div>
       </div>
+
+      {/* Modal ReportForm */}
+      {openForm && typeof p.ocoId === 'number' && (
+        <ReportForm
+          ocoId={p.ocoId}
+          onClose={() => {
+            setOpenForm(false)
+            infos.refetch()
+          }}
+        />
+      )}
     </div>
   )
 }

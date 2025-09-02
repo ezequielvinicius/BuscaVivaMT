@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { getPessoa } from '@/services/personService'
+import { getPessoa } from '@/service/personService' 
 
 export function usePessoa(id?: string) {
   return useQuery({
