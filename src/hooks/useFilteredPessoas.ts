@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { listPessoasAll } from '@/services/personService'
+import { listPessoasAll } from '@/service/personService'
 import type { FiltroParams } from '@/types/api'
 import type { PersonListItem } from '@/types/person'
 

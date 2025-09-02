@@ -1,5 +1,5 @@
 import { useQuery, keepPreviousData } from '@tanstack/react-query'
-import { listPessoas } from '@/services/personService' // << singular
+import { listPessoas } from '@/service/personService'
 import type { FiltroParams } from '@/types/api'
 import type { PaginatedResponse, PersonListItem } from '@/types/person'
 

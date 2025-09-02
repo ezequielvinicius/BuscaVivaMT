@@ -3,43 +3,7 @@ import { API_ENDPOINTS } from '@/lib/api/endpoints'
 import type { FiltroParams } from '@/types/api'
 import type { APIPersonResponse, PaginatedResponse, PersonListItem } from '@/types/person'
 
-export type InfoOcorrencia = {
-  ocoId: number
-  informacao: string
-  data: string   // yyyy-MM-dd
-  id: number
-  anexos?: string[]
-}
-
-export async function getInformacoesOcorrencia(ocorrenciaId: number) {
-  const { data } = await api.get<InfoOcorrencia[]>(
-    API_ENDPOINTS.OCORRENCIAS.INFO_LIST,
-    { params: { ocorrenciaId } }
-  )
-  return data
-}
-
-export type CreateInfoPayload = {
-  informacao: string
-  descricao: string
-  data: string     // yyyy-MM-dd
-  ocoId: number
-  files?: File[]
-}
-
-export async function createInfoOcorrencia(p: CreateInfoPayload) {
-  const fd = new FormData()
-  for (const f of p.files ?? []) fd.append('files', f)
-  // query params: informacao, descricao, data, ocoId
-  const { data } = await api.post(
-    API_ENDPOINTS.OCORRENCIAS.INFO_CREATE,
-    fd,
-    { params: { informacao: p.informacao, descricao: p.descricao, data: p.data, ocoId: p.ocoId } }
-  )
-  return data
-}
-
-/** LISTA (uma página – usa paginação do backend) */
+/** LISTA (uma página — usa paginação do backend) */
 export async function listPessoas(params: FiltroParams): Promise<PaginatedResponse<any>> {
   const cleanParams = Object.entries(params).reduce((acc, [k, v]) => {
     if (v !== undefined && v !== null && v !== '') acc[k] = v
@@ -50,7 +14,7 @@ export async function listPessoas(params: FiltroParams): Promise<PaginatedRespon
   return data
 }
 
-/** LISTA (TODAS as páginas – concatena tudo para filtrar no front) */
+/** LISTA (TODAS as páginas — concatena tudo para filtrar no front) */
 export async function listPessoasAll(params: FiltroParams): Promise<PaginatedResponse<any>> {
   // o backend limita porPagina a ~200, então varremos as páginas
   const base = { ...params, pagina: 0, porPagina: 200 }
@@ -121,4 +85,21 @@ export async function getPessoa(id: string | number): Promise<{
   } as const
 
   return { pessoa }
+}
+
+/** ESTATÍSTICAS */
+export async function getEstatisticas(): Promise<{
+  quantPessoasDesaparecidas: number
+  quantPessoasEncontradas: number
+}> {
+  const { data } = await api.get(API_ENDPOINTS.PESSOAS.ABERTO_ESTATISTICO)
+  return data
+}
+
+/** PESSOAS DINÂMICAS (com fotos, randômicas) */
+export async function getPessoasDinamicas(registros = 4): Promise<APIPersonResponse[]> {
+  const { data } = await api.get(API_ENDPOINTS.PESSOAS.ABERTO_DINAMICO, {
+    params: { registros }
+  })
+  return data
 }

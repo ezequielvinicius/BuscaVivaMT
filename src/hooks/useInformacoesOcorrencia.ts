@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { getInformacoesOcorrencia, createInfoOcorrencia } from '@/services/ocorrenciasService'
+import { getInformacoesOcorrencia, createInfoOcorrencia } from '@/service/ocorrenciasService'
 
 export function useInformacoesOcorrencia(ocoId?: number) {
   const list = useQuery({
@@ -9,9 +9,7 @@ export function useInformacoesOcorrencia(ocoId?: number) {
     staleTime: 2 * 60 * 1000,
   })
 
-  const create = useMutation({
-    mutationFn: createInfoOcorrencia,
-  })
+  const create = useMutation({ mutationFn: createInfoOcorrencia })
 
   return { list, create }
 }
