@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { listPessoasAll } from '@/service/personService'
+import { listTodasPessoas } from '@/service/personService' // ✅ Correto
 import type { FiltroParams } from '@/types/api'
 import type { PersonListItem } from '@/types/person'
 
@@ -29,7 +29,7 @@ export function useFilteredPessoas(filters: FiltroParams): FilteredResult {
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['pessoas-all', backendFilters],
-    queryFn: () => listPessoasAll(backendFilters),
+    queryFn: () => listTodasPessoas(backendFilters), // ✅ CORRIGIDO AQUI
     staleTime: 2 * 60 * 1000,
   })
 
