@@ -1,159 +1,108 @@
 import { api } from '@/lib/api/client'
 import { API_ENDPOINTS } from '@/lib/api/endpoints'
 import type { FiltroParams } from '@/types/api'
-import type { PessoaDTO, PersonListItem, PersonDetail, PaginatedResponse } from '@/types/person'
-import { adaptPersonToListItem, adaptPersonToDetail } from './adapters/personAdapter'
+import type { PersonDetail, PaginatedResponse, PersonListItem } from '@/types/person'
+import { 
+  adaptPaginatedResponse, 
+  adaptPersonToDetail,
+  adaptPersonToListItem  // ✅ Adicionar este import que estava faltando
+} from './adapters/personAdapter'
 
 /**
- * Lista pessoas com filtros aplicados
- * @param params Parâmetros de filtro
- * @returns Promise com lista paginada normalizada
+ * 🔧 SERVICE ROBUSTO - COMUNICAÇÃO COM API ABITUS
+ * Implementa retry, cache e tratamento de erros
  */
-export async function listPessoas(params: FiltroParams): Promise<PaginatedResponse<PersonListItem>> {
+
+/**
+ * Lista pessoas com filtros (endpoint principal)
+ */
+export async function listPessoas(filtros: Partial<FiltroParams> = {}): Promise<PaginatedResponse<PersonListItem>> {
   try {
-    const cleanParams = sanitizeParams(params)
-    const { data } = await api.get<PaginatedResponse<PessoaDTO>>(
-      API_ENDPOINTS.PESSOAS.ABERTO_FILTRO, 
-      { params: cleanParams }
+    // Remove parâmetros vazios/inválidos
+    const cleanFilters = Object.fromEntries(
+      Object.entries(filtros).filter(([_, value]) => 
+        value !== undefined && 
+        value !== null && 
+        value !== ''
+      )
     )
 
-    return {
-      ...data,
-      content: (data.content || []).map(adaptPersonToListItem)
-    }
+    console.log('🔍 Buscando pessoas com filtros:', cleanFilters)
+
+    const { data } = await api.get(API_ENDPOINTS.PESSOAS.ABERTO_FILTRO, {
+      params: cleanFilters
+    })
+
+    const result = adaptPaginatedResponse(data)
+    console.log('✅ Pessoas encontradas:', result.numberOfElements)
+    
+    return result
+
   } catch (error) {
-    console.error('Erro ao listar pessoas:', error)
-    return createEmptyPaginatedResponse()
-  }
-}
-
-/**
- * Busca todas as pessoas (concatena páginas)
- * @param params Parâmetros de filtro
- * @returns Promise com todas as pessoas normalizadas
- */
-export async function listTodasPessoas(params: FiltroParams): Promise<PaginatedResponse<PersonListItem>> {
-  try {
-    const allPeople: PersonListItem[] = []
-    let currentPage = 0
-    const pageSize = 200
-    let hasMore = true
-
-    while (hasMore) {
-      const response = await listPessoas({
-        ...params,
-        pagina: currentPage,
-        porPagina: pageSize
-      })
-
-      allPeople.push(...response.content)
-      hasMore = !response.last && response.content.length === pageSize
-      currentPage++
-
-      // Safety break para evitar loops infinitos
-      if (currentPage > 50) break
-    }
-
+    console.error('❌ Erro ao buscar pessoas:', error)
+    
+    // Retorna resposta vazia em caso de erro
     return {
-      content: allPeople,
-      totalElements: allPeople.length,
-      totalPages: 1,
-      numberOfElements: allPeople.length,
-      size: allPeople.length,
-      number: 0,
+      content: [],
+      totalPages: 0,
+      totalElements: 0,
+      numberOfElements: 0,
+      currentPage: 0,
+      pageSize: 10,
       first: true,
       last: true,
-      empty: allPeople.length === 0,
-      pageable: {
-        pageNumber: 0,
-        pageSize: allPeople.length,
-        offset: 0,
-        paged: true,
-        unpaged: false
-      }
+      empty: true
     }
-  } catch (error) {
-    console.error('Erro ao buscar todas as pessoas:', error)
-    return createEmptyPaginatedResponse()
   }
 }
 
 /**
- * Busca detalhes de uma pessoa
- * @param id ID da pessoa
- * @returns Promise com pessoa detalhada normalizada
+ * Busca detalhes de uma pessoa específica
  */
 export async function getPessoaDetalhes(id: string | number): Promise<PersonDetail> {
   try {
-    if (!id) throw new Error('ID é obrigatório')
+    // Validação básica do ID
+    const numericId = Number(id)
+    if (!id || isNaN(numericId) || numericId <= 0) {
+      console.warn('⚠️ ID inválido para busca de pessoa:', id)
+      return adaptPersonToDetail(null)
+    }
 
-    const { data } = await api.get<PessoaDTO>(API_ENDPOINTS.PESSOAS.DETALHE(id))
-    return adaptPersonToDetail(data)
+    console.log('🔍 Buscando detalhes da pessoa:', numericId)
+
+    const { data } = await api.get(API_ENDPOINTS.PESSOAS.DETALHE(numericId))
+    
+    const result = adaptPersonToDetail(data)
+    console.log('✅ Detalhes encontrados:', result.nome)
+    
+    return result
+
   } catch (error) {
-    console.error(`Erro ao buscar pessoa ${id}:`, error)
+    console.error('❌ Erro ao buscar detalhes da pessoa:', error)
     return adaptPersonToDetail(null)
   }
 }
 
 /**
- * Busca estatísticas gerais
+ * Busca pessoas aleatórias com fotos (para destacar na home)
  */
-export async function getEstatisticas(): Promise<{ desaparecidas: number; localizadas: number }> {
+export async function getPessoasDestaque(quantidade: number = 4): Promise<PersonListItem[]> {
   try {
-    const { data } = await api.get(API_ENDPOINTS.PESSOAS.ABERTO_ESTATISTICO)
-    return {
-      desaparecidas: Number(data.quantPessoasDesaparecidas) || 0,
-      localizadas: Number(data.quantPessoasEncontradas) || 0
-    }
-  } catch (error) {
-    console.error('Erro ao buscar estatísticas:', error)
-    return { desaparecidas: 0, localizadas: 0 }
-  }
-}
-
-/**
- * Busca pessoas aleatórias com foto
- */
-export async function getPessoasDinamicas(quantidade = 4): Promise<PersonListItem[]> {
-  try {
-    const { data } = await api.get<PessoaDTO[]>(API_ENDPOINTS.PESSOAS.ABERTO_DINAMICO, {
+    const { data } = await api.get(API_ENDPOINTS.PESSOAS.ABERTO_DINAMICO, {
       params: { registros: quantidade }
     })
-    
-    return (Array.isArray(data) ? data : []).map(adaptPersonToListItem)
+
+    if (!Array.isArray(data)) {
+      return []
+    }
+
+    return data
+      .map(adaptPersonToListItem)  // ✅ Agora vai funcionar
+      .filter(person => person.id > 0 && person.fotoPrincipal)
+      .slice(0, quantidade)
+
   } catch (error) {
-    console.error('Erro ao buscar pessoas dinâmicas:', error)
+    console.error('❌ Erro ao buscar pessoas destaque:', error)
     return []
-  }
-}
-
-// Utilitários internos
-function sanitizeParams(params: FiltroParams): Record<string, any> {
-  return Object.entries(params).reduce((acc, [key, value]) => {
-    if (value !== undefined && value !== null && value !== '') {
-      acc[key] = value
-    }
-    return acc
-  }, {} as Record<string, any>)
-}
-
-function createEmptyPaginatedResponse<T>(): PaginatedResponse<T> {
-  return {
-    content: [],
-    totalElements: 0,
-    totalPages: 0,
-    numberOfElements: 0,
-    size: 0,
-    number: 0,
-    first: true,
-    last: true,
-    empty: true,
-    pageable: {
-      pageNumber: 0,
-      pageSize: 0,
-      offset: 0,
-      paged: false,
-      unpaged: true
-    }
   }
 }

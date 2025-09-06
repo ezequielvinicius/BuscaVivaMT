@@ -1,38 +1,67 @@
 /**
- * Parâmetros de filtro padronizados para consultas
- * Baseado 100% no OpenAPI /v1/pessoas/aberto/filtro
+ * Tipos base extraídos diretamente da OpenAPI ABITUS
+ * Garantem 100% de compatibilidade com o backend
  */
+
+// ===== TIPOS BASE DA API =====
+export interface PessoaDTO {
+  id: number
+  nome: string
+  idade?: number
+  sexo: "MASCULINO" | "FEMININO"
+  vivo: boolean  // ⚠️ ESTE É O CAMPO REAL DA API
+  urlFoto?: string  // ⚠️ NOME CORRETO NA API
+  ultimaOcorrencia?: OcorrenciaDTO
+}
+
+export interface OcorrenciaDTO {
+  dtDesaparecimento?: string  // format: date-time
+  dataLocalizacao?: string   // format: date
+  encontradoVivo?: boolean
+  localDesaparecimentoConcat?: string
+  ocorrenciaEntrevDesapDTO?: OcorrenciaEntrevDesapDTO
+  listaCartaz?: OcorrenciaCartazDTO[]
+  ocoId: number
+}
+
+export interface OcorrenciaCartazDTO {
+  urlCartaz: string
+  tipoCartaz: "PDF_DESAPARECIDO" | "PDF_LOCALIZADO" | "JPG_DESAPARECIDO" | "JPG_LOCALIZADO" | "INSTA_DESAPARECIDO" | "INSTA_LOCALIZADO"
+}
+
+export interface OcorrenciaEntrevDesapDTO {
+  informacao?: string
+  vestimentasDesaparecido?: string
+}
+
+export interface PagePessoaDTO {
+  totalPages: number
+  totalElements: number
+  numberOfElements: number
+  first: boolean
+  last: boolean
+  size: number
+  content: PessoaDTO[]
+  number: number
+  empty: boolean
+}
+
+// ===== TIPOS PARA INFORMAÇÕES =====
+export interface OcorrenciaInformacaoDTO {
+  ocoId: number
+  informacao: string
+  data: string  // format: date
+  id?: number
+  anexos?: string[]
+}
+
+// ===== TIPOS DE FILTROS =====
 export interface FiltroParams {
   nome?: string
   faixaIdadeInicial?: number
   faixaIdadeFinal?: number
-  sexo?: 'MASCULINO' | 'FEMININO'
+  sexo?: "MASCULINO" | "FEMININO"
   pagina?: number
   porPagina?: number
-  status?: 'DESAPARECIDO' | 'LOCALIZADO'
+  status?: "DESAPARECIDO" | "LOCALIZADO"  // ⚠️ ESTE É UM FILTRO, NÃO CAMPO DA PESSOA
 }
-
-/**
- * Resposta de erro padronizada da API
- */
-export interface ApiError {
-  message: string
-  status: number
-  timestamp: string
-  path: string
-}
-
-/**
- * Wrapper para respostas da API com metadata
- */
-export interface ApiResponse<T = unknown> {
-  data: T
-  success: boolean
-  message?: string
-  errors?: string[]
-}
-
-/**
- * Estados padrão para requests
- */
-export type RequestState = 'idle' | 'loading' | 'success' | 'error'

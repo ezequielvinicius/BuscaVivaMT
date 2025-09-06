@@ -1,254 +1,140 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useState } from 'react'
 import { useFilteredPessoas } from '@/hooks/useFilteredPessoas'
 import { PersonCard } from '@/components/ui/PersonCard'
-import { Pagination } from '@/components/ui/Pagination'
 import { SearchBar } from '@/components/ui/SearchBar'
-import { FilterPanel } from './FilterPanel'
-import { readFiltersFromSearch, writeFiltersToSearch } from './urlFilters'
-import type { StatusPessoa, Sexo } from '@/types/person'
+import { LoadingStates } from '@/components/ui/LoadingStates'
+import { Pagination } from '@/components/ui/Pagination'
+import type { FiltroParams } from '@/types/api'
 
-export default function Home() {
-  const navigate = useNavigate()
-  const [searchParams, setSearchParams] = useSearchParams()
+export function Home() {
+  const [filtros, setFiltros] = useState<Partial<FiltroParams>>({
+    pagina: 0,
+    porPagina: 10
+  })
 
-  const filters = useMemo(() => readFiltersFromSearch(searchParams), [searchParams])
+  const [painelFiltroAberto, setPainelFiltroAberto] = useState(true)
 
-  // Estados locais para inputs controlados
-  const [nome, setNome] = useState(filters.nome ?? '')
-  const [status, setStatus] = useState(filters.status)
-  const [sexo, setSexo] = useState(filters.sexo)
-  const [faixaIdadeInicial, setFaixaIdadeInicial] = useState<number | undefined>(filters.faixaIdadeInicial)
-  const [faixaIdadeFinal, setFaixaIdadeFinal] = useState<number | undefined>(filters.faixaIdadeFinal)
-
-  // Sincroniza estados com URL
-  useEffect(() => {
-    setNome(filters.nome ?? '')
-    setStatus(filters.status)
-    setSexo(filters.sexo)
-    setFaixaIdadeInicial(filters.faixaIdadeInicial)
-    setFaixaIdadeFinal(filters.faixaIdadeFinal)
-  }, [filters])
-
-  // ===== HOOK PERSONALIZADO COM FILTROS INTELIGENTES =====
-  const { 
-    data: pessoas, 
-    totalFiltered, 
-    totalPages, 
-    isLoading, 
-    isError, 
-    error,
+  const {
+    data: pessoas,
+    totalPages,
+    isLoading,
+    isDebouncing,
+    isError,
     hasActiveFilters,
-    filterStats,
-    originalTotalElements
-  } = useFilteredPessoas(filters)
+    filterStats
+  } = useFilteredPessoas(filtros)
 
-  // ===== HANDLERS =====
-  const updateUrl = useCallback((next: Partial<{
-    nome: string | undefined
-    status: StatusPessoa | undefined
-    sexo: Sexo | undefined
-    faixaIdadeInicial: number | undefined
-    faixaIdadeFinal: number | undefined
-    pagina: number | undefined
-    porPagina: number | undefined
-  }>, resetPage = true) => {
-    const merged = {
-      nome: filters.nome,
-      status: filters.status,
-      sexo: filters.sexo,
-      faixaIdadeInicial: filters.faixaIdadeInicial,
-      faixaIdadeFinal: filters.faixaIdadeFinal,
-      pagina: filters.pagina ?? 0,
-      porPagina: filters.porPagina ?? 10,
-      ...next,
-    }
+  if (isLoading || isDebouncing) {
+    return <LoadingStates.PersonCardSkeleton count={8} />
+  }
 
-    if (resetPage && !('pagina' in next)) {
-      merged.pagina = 0
-    }
+  const handleSearch = (novosFiltros: Partial<FiltroParams>) => {
+    setFiltros(prev => ({
+      ...prev,
+      ...novosFiltros,
+      pagina: 0
+    }))
+  }
 
-    setSearchParams(writeFiltersToSearch(merged))
-  }, [filters, setSearchParams])
+  const handlePageChange = (novaPagina: number) => {
+    setFiltros(prev => ({ ...prev, pagina: novaPagina }))
+  }
 
-  const onSearchChange = useCallback((value: string) => {
-    setNome(value)
-    updateUrl({ nome: value.trim() || undefined })
-  }, [updateUrl])
+  if (isLoading) {
+    return <LoadingStates.PersonCardSkeleton count={8} />
+  }
 
-  const onFilterChange = useCallback((next: {
-    status?: StatusPessoa
-    sexo?: Sexo
-    faixaIdadeInicial?: number
-    faixaIdadeFinal?: number
-  }) => {
-    if ('status' in next) setStatus(next.status)
-    if ('sexo' in next) setSexo(next.sexo)
-    if ('faixaIdadeInicial' in next) setFaixaIdadeInicial(next.faixaIdadeInicial)
-    if ('faixaIdadeFinal' in next) setFaixaIdadeFinal(next.faixaIdadeFinal)
-    
-    updateUrl(next)
-  }, [updateUrl])
-
-  const onPageChange = useCallback((p: number) => {
-    updateUrl({ pagina: p }, false)
-  }, [updateUrl])
-
-  const clearFilters = useCallback(() => {
-    setNome('')
-    setStatus(undefined)
-    setSexo(undefined)
-    setFaixaIdadeInicial(undefined)
-    setFaixaIdadeFinal(undefined)
-    setSearchParams(writeFiltersToSearch({ pagina: 0, porPagina: 10 }))
-  }, [setSearchParams])
-
-  // ===== RENDER =====
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-4">
-      {/* Header */}
-      <div className="flex flex-col gap-3">
-        <h1 className="text-2xl font-semibold">Pessoas Desaparecidas</h1>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
-        {/* Barra de Busca e Filtros */}
-        <div className="flex flex-col md:flex-row gap-3 md:items-center">
-          <SearchBar initialValue={nome} onChange={onSearchChange} />
-          <FilterPanel
-            status={status}
-            sexo={sexo}
-            faixaIdadeInicial={faixaIdadeInicial}
-            faixaIdadeFinal={faixaIdadeFinal}
-            onChange={onFilterChange}
-          />
+        <div className="mb-6 flex justify-between items-center">
+          <h2 className="text-2xl font-bold text-gray-900">Pessoas Desaparecidas</h2>
           <button
-            type="button"
-            onClick={clearFilters}
-            className="h-10 px-3 rounded-lg border bg-white hover:bg-gray-50 transition-colors disabled:opacity-50"
-            disabled={!hasActiveFilters}
-            aria-label="Limpar todos os filtros"
+            onClick={() => setPainelFiltroAberto(!painelFiltroAberto)}
+            className="px-4 py-2 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50"
           >
-            Limpar filtros
+            {painelFiltroAberto ? 'Ocultar Filtros' : 'Mostrar Filtros'}
           </button>
         </div>
 
-        {/* Status Bar */}
-        <div className="flex justify-between items-center text-sm text-gray-600">
-          <div className="flex items-center gap-3">
-            <p>
-              {totalFiltered} de {originalTotalElements} resultados
-              {hasActiveFilters && (
-                <span className="text-xs text-blue-600 ml-1">
-                  ({filterStats.percentageFiltered}% filtrados)
+
+        {painelFiltroAberto && (
+          <div className="mb-8">
+            <SearchBar
+              key="search-bar-stable"
+              onSearch={handleSearch}
+              initialValues={filtros}
+            />
+          </div>
+        )}
+
+        {hasActiveFilters && (
+          <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p className="text-sm text-blue-800">
+              Mostrando <strong>{filterStats.filtered}</strong> de <strong>{filterStats.total}</strong> pessoas
+              {filterStats.percentageFiltered < 100 && (
+                <span className="ml-2 text-blue-600">
+                  ({filterStats.percentageFiltered}% dos registros)
                 </span>
               )}
             </p>
-            
-            {/* Badges dos Filtros Ativos */}
-            <div className="flex gap-2">
-              {status && (
-                <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
-                  {status === 'DESAPARECIDO' ? 'Desaparecidas' : 'Localizadas'}
-                </span>
-              )}
-              {sexo && (
-                <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
-                  {sexo === 'MASCULINO' ? 'Masculino' : 'Feminino'}
-                </span>
-              )}
-              {(faixaIdadeInicial !== undefined || faixaIdadeFinal !== undefined) && (
-                <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs">
-                  Idade: {faixaIdadeInicial ?? '0'}-{faixaIdadeFinal ?? '∞'}
-                </span>
-              )}
+          </div>
+        )}
+
+        {pessoas.length > 0 ? (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
+              {pessoas.map(pessoa => (
+                <PersonCard key={pessoa.id} pessoa={pessoa} />
+              ))}
             </div>
-          </div>
-          
-          <p>Exibindo {filters.porPagina ?? 10} por página</p>
-        </div>
-      </div>
 
-      {/* Loading State */}
-      {isLoading && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-56 bg-gray-100 rounded-xl animate-pulse" />
-          ))}
-        </div>
-      )}
-
-      {/* Error State */}
-      {isError && (
-        <div className="p-6 bg-red-50 text-red-700 rounded-lg border border-red-200 space-y-2">
-          <p className="font-semibold">⚠️ Falha ao carregar dados</p>
-          <p className="text-sm">Não foi possível conectar com o servidor. Tente novamente em alguns instantes.</p>
-          <details className="text-xs text-red-700/80">
-            <summary className="cursor-pointer">Ver detalhes técnicos</summary>
-            <pre className="mt-2 whitespace-pre-wrap text-xs">
-              {JSON.stringify((error as any)?.response?.data ?? (error as any)?.message ?? error, null, 2)}
-            </pre>
-          </details>
-        </div>
-      )}
-
-      {/* Empty State */}
-      {!isLoading && !isError && pessoas.length === 0 && (
-        <div className="p-8 bg-gray-50 text-gray-700 rounded-lg border text-center">
-          {hasActiveFilters ? (
-            <>
-              <p className="text-lg font-medium">🔍 Nenhum resultado encontrado</p>
-              <p className="text-sm mt-2 text-gray-600">
-                Nenhuma pessoa corresponde aos filtros aplicados. 
-                Tente ajustar os critérios de busca.
-              </p>
-              <button
-                onClick={clearFilters}
-                className="mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-              >
-                Limpar todos os filtros
-              </button>
-            </>
-          ) : (
-            <>
-              <p className="text-lg font-medium">📋 Nenhuma pessoa cadastrada</p>
-              <p className="text-sm mt-2 text-gray-600">
-                Não há registros de pessoas desaparecidas no momento.
-              </p>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* Results Grid */}
-      {!isLoading && !isError && pessoas.length > 0 && (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {pessoas.map((pessoa) => (
-              <div 
-                key={pessoa.id} 
-                onClick={() => navigate(`/pessoa/${pessoa.id}`)}
-                className="cursor-pointer hover:scale-[1.02] transition-transform duration-200"
-              >
-                <PersonCard p={pessoa} />
-              </div>
-            ))}
-          </div>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex justify-center items-center gap-4">
+            {totalPages > 1 && (
               <Pagination
-                page={filters.pagina ?? 0}
+                currentPage={filtros.pagina || 0}
                 totalPages={totalPages}
-                onChange={onPageChange}
+                onPageChange={handlePageChange}
               />
-              <p className="text-sm text-gray-500">
-                {((filters.pagina ?? 0) * (filters.porPagina ?? 10)) + 1}-{Math.min(((filters.pagina ?? 0) + 1) * (filters.porPagina ?? 10), totalFiltered)} 
-                de {totalFiltered}
+            )}
+          </>
+        ) : (
+          <div className="text-center py-12">
+            <div className="max-w-md mx-auto">
+              <svg className="mx-auto h-16 w-16 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-5.2-5.2m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+              </svg>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                {hasActiveFilters ? 'Nenhuma pessoa encontrada' : 'Carregando pessoas...'}
+              </h3>
+              <p className="text-gray-500">
+                {hasActiveFilters
+                  ? 'Tente ajustar os filtros de busca'
+                  : 'Os dados estão sendo carregados'
+                }
               </p>
             </div>
-          )}
-        </>
-      )}
+          </div>
+        )}
+
+        {isError && (
+          <div className="text-center py-12">
+            <div className="max-w-md mx-auto">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+                <svg className="mx-auto h-12 w-12 text-red-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                </svg>
+                <h3 className="text-lg font-medium text-red-800 mb-2">Erro ao carregar dados</h3>
+                <p className="text-red-600 text-sm">
+                  Não foi possível conectar com o servidor.
+                  <br />
+                  Verifique sua conexão e tente novamente.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

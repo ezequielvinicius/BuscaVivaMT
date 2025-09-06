@@ -1,114 +1,56 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { listTodasPessoas } from '@/service/personService' // ✅ Correto
+import { listPessoas } from '@/service/personService'
 import type { FiltroParams } from '@/types/api'
-import type { PersonListItem } from '@/types/person'
 
-interface FilteredResult {
-  data: PersonListItem[]
-  totalFiltered: number
-  totalPages: number
-  isLoading: boolean
-  isError: boolean
-  error: any
-  hasActiveFilters: boolean
-  filterStats: {
-    total: number
-    filtered: number
-    percentageFiltered: number
-  }
-  originalTotalElements: number
-}
 
-export function useFilteredPessoas(filters: FiltroParams): FilteredResult {
-  // Remove status/paginação do servidor; vamos filtrar e paginar no front
-  const backendFilters = useMemo(() => {
-    const { status, pagina, porPagina, ...rest } = filters
-    return { ...rest }
-  }, [filters])
-
-  const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['pessoas-all', backendFilters],
-    queryFn: () => listTodasPessoas(backendFilters), // ✅ CORRIGIDO AQUI
-    staleTime: 2 * 60 * 1000,
+export function useFilteredPessoas(filtros: Partial<FiltroParams>) {
+  const {
+    data,
+    isLoading,
+    isError,
+    error
+  } = useQuery({
+    queryKey: ['pessoas', filtros],
+    queryFn: () => listPessoas(filtros),  // ✅ Nome correto
+    staleTime: 5 * 60 * 1000, // 5 minutos
+    retry: 2
   })
 
-  const filteredResult = useMemo(() => {
-    const originalList = data?.content ?? []
+  const totalPages = data?.totalPages ?? 0
+  const totalFiltered = data?.numberOfElements ?? 0
+  const originalTotalElements = data?.totalElements ?? 0
 
-    // Mapeia para o formato PersonListItem
-    const mappedList: PersonListItem[] = originalList.map((pessoa: any) => ({
-      id: pessoa.id,
-      nome: pessoa.nome,
-      idade: pessoa.idade,
-      sexo: pessoa.sexo,
-      status: pessoa.vivo === false ? 'LOCALIZADO' : 'DESAPARECIDO',
-      fotoPrincipal: pessoa.urlFoto,
-      cidade: pessoa.ultimaOcorrencia?.localDesaparecimentoConcat || '',
-      dataDesaparecimento: pessoa.ultimaOcorrencia?.dtDesaparecimento,
-    }))
-
-    let filteredList = [...mappedList]
-
-    // Filtro de status (feito no front para contornar a API)
-    if (filters.status) {
-      filteredList = filteredList.filter(p => p.status === filters.status)
-    }
-    if (filters.sexo) {
-      filteredList = filteredList.filter(p => p.sexo === filters.sexo)
-    }
-    if (filters.faixaIdadeInicial !== undefined) {
-      filteredList = filteredList.filter(p => (p.idade ?? 0) >= filters.faixaIdadeInicial!)
-    }
-    if (filters.faixaIdadeFinal !== undefined) {
-      filteredList = filteredList.filter(p => (p.idade ?? 0) <= filters.faixaIdadeFinal!)
-    }
-    if (filters.nome?.trim()) {
-      const q = filters.nome.trim().toLowerCase()
-      filteredList = filteredList.filter(p => p.nome.toLowerCase().includes(q))
-    }
-
-    // Paginação manual
-    const itemsPerPage = filters.porPagina ?? 10
-    const currentPage = filters.pagina ?? 0
-    const totalFiltered = filteredList.length
-    const totalPages = Math.ceil(totalFiltered / itemsPerPage)
-
-    const start = currentPage * itemsPerPage
-    const end = start + itemsPerPage
-    const paginatedList = filteredList.slice(start, end)
-
-    // Estatísticas
-    const hasActiveFilters = Boolean(
-      filters.status ||
-      filters.sexo ||
-      filters.faixaIdadeInicial !== undefined ||
-      filters.faixaIdadeFinal !== undefined ||
-      filters.nome?.trim()
+  const hasActiveFilters = useMemo(() => {
+    return Boolean(
+      filtros.nome || 
+      filtros.sexo || 
+      filtros.status || 
+      filtros.faixaIdadeInicial || 
+      filtros.faixaIdadeFinal
     )
+  }, [filtros])
 
-    const filterStats = {
-      total: mappedList.length,
-      filtered: totalFiltered,
-      percentageFiltered: mappedList.length > 0
-        ? Math.round((totalFiltered / mappedList.length) * 100)
-        : 0
-    }
+  const filterStats = useMemo(() => {
+    const percentageFiltered = originalTotalElements > 0 
+      ? Math.round((totalFiltered / originalTotalElements) * 100)
+      : 100
 
     return {
-      data: paginatedList,
-      totalFiltered,
-      totalPages,
-      hasActiveFilters,
-      filterStats,
-      originalTotalElements: mappedList.length,
+      total: originalTotalElements,
+      filtered: totalFiltered,
+      percentageFiltered
     }
-  }, [data, filters])
+  }, [totalFiltered, originalTotalElements])
 
   return {
-    ...filteredResult,
+    data: data?.content ?? [],
+    totalPages,
     isLoading,
     isError,
     error,
+    hasActiveFilters,
+    filterStats,
+    originalTotalElements
   }
 }
