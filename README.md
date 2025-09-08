@@ -390,7 +390,7 @@ git commit -m "docs: atualiza README com Docker"
 
 ## 📄 Licença
 
-Projeto desenvolvido para o processo seletivo da **Polícia Judiciária Civil de Mato Grosso**.
+Projeto desenvolvido para o processo seletivo da **DesenvoloveMT**.
 
 -----
 
