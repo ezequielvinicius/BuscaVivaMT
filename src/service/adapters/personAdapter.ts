@@ -1,36 +1,19 @@
+// src/service/adapters/personAdapter.ts - APENAS DATALOCALIZACAO COMO FONTE DA VERDADE
 import type { PessoaDTO } from '@/types/api'
 import type { PersonListItem, PersonDetail, PersonStatus, PaginatedResponse } from '@/types/person'
 
 /**
- * 🛡️ ADAPTER DEFENSIVO - CONVERTE API → FRONTEND
- * Protege contra mudanças na API e dados inconsistentes
+ * ✅ ÚNICA MUDANÇA: dataLocalizacao como fonte da verdade
+ * Se tem dataLocalizacao = LOCALIZADO
+ * Se não tem dataLocalizacao = DESAPARECIDO
  */
-
-/**
- * Determina o status real baseado nos dados da API
- * ⚠️ LÓGICA CRÍTICA: Interpreta corretamente vivo/morto vs desaparecido/localizado
- */
-function determinePersonStatus(pessoa: PessoaDTO): PersonStatus {
-  // ✅ LÓGICA CORRETA: Baseada nos dados reais da API
-  
-  // Se encontradoVivo = true, pessoa foi localizada VIVA
-  if (pessoa.ultimaOcorrencia?.encontradoVivo === true) {
-    return "LOCALIZADO"
+function corrigirStatusVisual(pessoa: PessoaDTO): PersonStatus {
+  if (pessoa.ultimaOcorrencia?.dataLocalizacao) {
+    return 'LOCALIZADO'
   }
-  
-  // Se vivo = false, pessoa foi localizada MORTA
-  if (pessoa.vivo === false) {
-    return "LOCALIZADO"
-  }
-  
-  // Se vivo = true e encontradoVivo != true, ainda está DESAPARECIDA
-  return "DESAPARECIDO"
+  return 'DESAPARECIDO'
 }
 
-
-/**
- * Converte PessoaDTO → PersonListItem (para cards na listagem)
- */
 export function adaptPersonToListItem(pessoa: PessoaDTO | null): PersonListItem {
   if (!pessoa) {
     return {
@@ -49,16 +32,13 @@ export function adaptPersonToListItem(pessoa: PessoaDTO | null): PersonListItem 
     nome: (pessoa.nome || '').trim() || 'Nome não informado',
     idade: pessoa.idade,
     sexo: ['MASCULINO', 'FEMININO'].includes(pessoa.sexo) ? pessoa.sexo : 'MASCULINO',
-    status: determinePersonStatus(pessoa),
+    status: corrigirStatusVisual(pessoa), // ✅ ÚNICA MUDANÇA AQUI
     fotoPrincipal: pessoa.urlFoto || '',
     cidade: pessoa.ultimaOcorrencia?.localDesaparecimentoConcat || '',
     dataDesaparecimento: pessoa.ultimaOcorrencia?.dtDesaparecimento || ''
   }
 }
 
-/**
- * Converte PessoaDTO → PersonDetail (para página de detalhes)
- */
 export function adaptPersonToDetail(pessoa: PessoaDTO | null): PersonDetail {
   const baseItem = adaptPersonToListItem(pessoa)
   
@@ -84,7 +64,7 @@ export function adaptPersonToDetail(pessoa: PessoaDTO | null): PersonDetail {
     informacaoBreve: ocorrencia?.ocorrenciaEntrevDesapDTO?.informacao || '',
     vestimentas: ocorrencia?.ocorrenciaEntrevDesapDTO?.vestimentasDesaparecido || '',
     cartazes: (ocorrencia?.listaCartaz || [])
-      .filter(cartaz => cartaz && cartaz.urlCartaz) // Remove inválidos
+      .filter(cartaz => cartaz && cartaz.urlCartaz)
       .map(cartaz => ({
         urlCartaz: cartaz.urlCartaz,
         tipoCartaz: cartaz.tipoCartaz || 'Cartaz'
@@ -92,9 +72,6 @@ export function adaptPersonToDetail(pessoa: PessoaDTO | null): PersonDetail {
   }
 }
 
-/**
- * Remove entradas duplicadas baseado no ID
- */
 export function removeDuplicatedPersons<T extends { id: number }>(persons: T[]): T[] {
   const seen = new Set<number>()
   return persons.filter(person => {
@@ -104,9 +81,6 @@ export function removeDuplicatedPersons<T extends { id: number }>(persons: T[]):
   })
 }
 
-/**
- * Converte PagePessoaDTO → PaginatedResponse<PersonListItem>
- */
 export function adaptPaginatedResponse(apiResponse: any): PaginatedResponse<PersonListItem> {
   if (!apiResponse || typeof apiResponse !== 'object') {
     return {
@@ -123,14 +97,14 @@ export function adaptPaginatedResponse(apiResponse: any): PaginatedResponse<Pers
   }
 
   const pessoas = (Array.isArray(apiResponse.content) ? apiResponse.content : [])
-    .map(adaptPersonToListItem)
-    .filter((person: PersonListItem) => person.id > 0) // ✅ TIPAGEM EXPLÍCITA ADICIONADA
+    .map(pessoa => adaptPersonToListItem(pessoa))
+    .filter((person: PersonListItem) => person.id > 0)
 
   return {
     content: removeDuplicatedPersons(pessoas),
     totalPages: apiResponse.totalPages ?? 0,
     totalElements: apiResponse.totalElements ?? 0,
-    numberOfElements: apiResponse.numberOfElements ?? 0,
+    numberOfElements: pessoas.length,
     currentPage: apiResponse.number ?? 0,
     pageSize: apiResponse.size ?? 0,
     first: apiResponse.first ?? true,

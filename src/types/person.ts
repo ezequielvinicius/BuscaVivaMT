@@ -32,7 +32,7 @@ export interface PersonDetail extends PersonListItem {
   }>
 }
 
-// ⚠️ IMPORTANTE: Este tipo estava faltando e causando erro
+// Response paginada normalizada
 export interface PaginatedResponse<T> {
   content: T[]
   totalPages: number

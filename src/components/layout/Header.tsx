@@ -40,14 +40,6 @@ export function Header() {
               </p>
             </div>
           </Link>
-
-          {/* Badge Institucional */}
-          <div className="hidden md:flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2">
-            <div className="w-2 h-2 bg-institutional-green rounded-full animate-pulse-slow"></div>
-            <span className="text-white text-sm font-medium">
-              Polícia Civil - MT
-            </span>
-          </div>
         </div>
       </div>
 

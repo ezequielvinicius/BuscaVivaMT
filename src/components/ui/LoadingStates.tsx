@@ -1,3 +1,5 @@
+import { PersonDetailSkeleton } from './PersonDetailSkeleton'
+
 // Skeleton para cards de pessoas
 export function PersonCardSkeleton({ count = 8 }: { count?: number }) {
   return (
@@ -100,10 +102,9 @@ export function Spinner({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
   )
 }
 
-// Estados de loading agrupados
 const LoadingStates = {
   PersonCardSkeleton,
-  PersonDetail,
+  PersonDetail: PersonDetailSkeleton, // ✅ Nova função
   Spinner
 }
 

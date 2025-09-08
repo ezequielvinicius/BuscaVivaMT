@@ -1,26 +1,27 @@
-FROM node:18-alpine AS builder
+# Use uma imagem base com Node.js
+FROM node:18-alpine AS build
 
+# Defina onde vai trabalhar dentro do container
 WORKDIR /app
 
-# Copia arquivos de dependência
-COPY package.json package-lock.json* ./
-RUN npm ci --only=production
+# Copie os arquivos de dependência
+COPY package*.json ./
 
-# Copia código fonte
+# Instale as dependências
+RUN npm install
+
+# Copie todo o código
 COPY . .
 
-# Build da aplicação
+# Faça o build da aplicação
 RUN npm run build
 
-# Estágio de produção com Nginx
+# Use nginx para servir os arquivos
 FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
 
-# Copia build da aplicação
-COPY --from=builder /app/dist /usr/share/nginx/html
-
-# Configuração customizada do Nginx
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-
+# Exponha a porta 80
 EXPOSE 80
 
+# Inicie o nginx
 CMD ["nginx", "-g", "daemon off;"]

@@ -60,8 +60,8 @@ export interface FiltroParams {
   nome?: string
   faixaIdadeInicial?: number
   faixaIdadeFinal?: number
-  sexo?: "MASCULINO" | "FEMININO"
+  sexo?: "MASCULINO" | "FEMININO" | "Todos"  // ✅ Inclui 'Todos'
   pagina?: number
   porPagina?: number
-  status?: "DESAPARECIDO" | "LOCALIZADO"  // ⚠️ ESTE É UM FILTRO, NÃO CAMPO DA PESSOA
+  status?: "DESAPARECIDO" | "LOCALIZADO" | "Todos"  // ✅ Inclui 'Todos'
 }

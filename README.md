@@ -1,321 +1,428 @@
-# Sistema de Consulta de Pessoas Desaparecidas
 
-Sistema web para consulta de pessoas desaparecidas e localização colaborativa, desenvolvido para a Polícia Judiciária Civil de Mato Grosso.
+# buscavivaMT - Sistema de Consulta de Pessoas Desaparecidas
+
+Sistema web desenvolvido para a consulta de pessoas desaparecidas e o envio colaborativo de informações, conforme a especificação da Polícia Judiciária Civil de Mato Grosso.
 
 ## 🎯 Funcionalidades Principais
 
-- **RF001 - Listagem de Pessoas**: Exibição de cards com paginação (mín. 10/página)
-- **RF002 - Busca e Filtros**: Busca por nome, filtros por status, sexo e faixa etária
-- **RF003 - Detalhamento**: Página completa com informações e status destacado
-- **RF004 - Envio de Informações**: Formulário com máscaras, upload e mapa
+### ✅ Implementadas Conforme Requisitos Oficiais
+- **📋 Listagem Paginada**: Cards com foto, dados e status destacado (mín. 10/página).
+- **🔍 Busca Avançada**: Filtros por nome, sexo, status e faixa etária com debounce.
+- **📄 Detalhamento Completo**: Página individual com informações completas e status visual.
+- **📝 Envio de Informações**: Formulário com máscaras, geolocalização e upload de fotos.
 
-## 🛠️ Tecnologias Utilizadas
+### 🚀 Funcionalidades Extras
+- **Chips de filtros removíveis** com contador de resultados.
+- **Geolocalização automática** via GPS do navegador.
+- **Sistema de busca inteligente** com persistência na URL.
+- **Estados de loading elegantes** com skeleton screens.
+- **Design responsivo** otimizado para mobile e desktop.
+
+## 🛠️ Stack Tecnológica
 
 - **Frontend**: React 18 + TypeScript + Vite
 - **Roteamento**: React Router v6 com Lazy Loading
-- **Estado**: TanStack Query (React Query) + React Hook Form
+- **Estado Global**: TanStack Query (React Query)
+- **Formulários**: React Hook Form + Zod (validação)
 - **Estilização**: Tailwind CSS
-- **Validação**: Zod + React Hook Form
-- **Mapas**: Leaflet (via CDN)
-- **Containerização**: Docker + Nginx
+- **Geolocalização**: Navigator Geolocation API
+- **Ícones**: Lucide React
+- **Container**: Docker + Nginx Alpine
 
 ## 📋 Pré-requisitos
 
-- Node.js 18+
-- npm ou yarn
-- Docker (opcional)
+- **Node.js** 18+
+- **npm** ou **yarn**
+- **Docker** (para containerização)
 
 ## 🚀 Instalação e Execução
 
 ### Desenvolvimento Local
 
-```bash
-# Clone o repositório
-git clone [URL_DO_REPOSITORIO]
-cd sistema-pessoas-desaparecidas
+1.  **Clone o repositório**
+    ```bash
+    git clone [https://github.com/SEU_USUARIO/buscavivaMT.git](https://github.com/SEU_USUARIO/buscavivaMT.git)
+    cd buscavivaMT
+    ```
 
-# Instale as dependências
-npm install
+2.  **Instale as dependências**
+    ```bash
+    npm install
+    ```
 
-# Configure o ambiente
-cp .env.example .env
+3.  **Configure as variáveis de ambiente**
+    ```bash
+    cp .env.example .env
+    ```
 
-# Execute em modo desenvolvimento
-npm run dev
-```
+4.  **Edite o arquivo `.env`** conforme necessário.
 
-### Produção com Docker
+5.  **Execute em modo de desenvolvimento**
+    ```bash
+    npm run dev
+    ```
+    Acesse: `http://localhost:5173`
 
-```bash
-# Build da imagem
-docker build -t pessoas-desaparecidas .
+### 🐳 Produção com Docker
 
-# Execute o container
-docker run -p 3000:80 pessoas-desaparecidas
-```
+1.  **Build da imagem Docker**
+    ```bash
+    docker build -t buscaviva-mt .
+    ```
 
-### Docker Compose
+2.  **Execute o container**
+    ```bash
+    docker run -p 3000:80 buscaviva-mt
+    ```
+    Acesse: `http://localhost:3000`
 
-```bash
-# Execute com docker-compose
-docker-compose up -d
-```
+### Docker Compose (Opcional)
 
-Acesse: http://localhost:3000
+1.  **Execute com `docker-compose`**
+    ```bash
+    docker-compose up -d
+    ```
 
 ## 🏗️ Arquitetura do Projeto
 
 ```
+
 src/
-├── app/                    # Configuração global
-│   ├── queryClient.ts     # Configuração React Query
-│   └── routes.tsx         # Roteamento com Lazy Loading
+├── app/                  \# Configuração da aplicação
+│   ├── queryClient.ts    \# Config React Query
+│   └── routes.tsx        \# Rotas com Lazy Loading
 ├── components/
-│   ├── ui/                # Componentes reutilizáveis
+│   ├── ui/               \# Componentes base reutilizáveis
 │   │   ├── PersonCard.tsx
+│   │   ├── SearchBar.tsx     \# Busca com debounce
+│   │   ├── FilterChips.tsx   \# Chips removíveis
+│   │   ├── Modal.tsx         \# Modal reutilizável
+│   │   ├── StatusPill.tsx    \# Status visual
 │   │   ├── Pagination.tsx
-│   │   ├── SearchBar.tsx
-│   │   ├── StatusPill.tsx
-│   │   └── InputMasks.tsx # Máscaras de entrada
-│   └── ErrorBoundary.tsx  # Tratamento de erros
-├── features/              # Funcionalidades por domínio
+│   │   └── InputMasks.tsx    \# Máscaras (data/telefone)
+│   └── forms/
+│       └── FileInput.tsx     \# Upload com preview
+├── features/             \# Funcionalidades por domínio
 │   ├── home/
-│   │   ├── Home.tsx
-│   │   ├── FilterPanel.tsx
-│   │   └── urlFilters.ts
-│   ├── person/
-│   │   ├── PersonDetail.tsx
-│   │   └── ReportForm.tsx
-│   └── dd/               # Delegacia Digital
-│       └── DelegaciaDigitalWizard.tsx
-├── hooks/                # Hooks customizados
-│   ├── usePessoas.ts
-│   ├── usePessoa.ts
+│   │   └── Home.tsx          \# Página inicial
+│   └── people/
+│       ├── PersonDetail.tsx  \# Detalhes da pessoa
+│       └── ReportForm.tsx    \# Formulário de informações
+├── hooks/                \# Hooks customizados
 │   ├── useFilteredPessoas.ts
-│   ├── useInformacoesOcorrencia.ts
-│   ├── useDelegaciaDigital.ts
-│   └── useDebouncedValue.ts
-├── services/             # Camada de API
+│   ├── usePessoa.ts
+│   ├── useDebounce.ts
+│   └── useCreateInfoOcorrencia.ts
+├── service/              \# Camada de API
 │   ├── personService.ts
-│   └── ocorrenciasService.ts
+│   └── ocorrenciaService.ts
 ├── lib/
 │   └── api/
-│       ├── client.ts     # Cliente Axios
-│       └── endpoints.ts  # Endpoints da API
-├── types/                # Definições TypeScript
+│       ├── client.ts       \# Cliente Axios configurado
+│       └── endpoints.ts    \# Endpoints organizados
+├── types/                \# Definições TypeScript
 │   ├── person.ts
-│   └── api.ts
+│   ├── api.ts
+│   └── forms.ts
 └── styles/
-    └── index.css
+└── index.css         \# Estilos globais + Tailwind
+
 ```
 
-## 🎨 Design System
+## 🎨 Componentes Principais
 
-### Componentes Principais
+### PersonCard
+Card responsivo exibindo foto, nome, idade, local e status com um design consistente e claro.
 
-- **PersonCard**: Card responsivo com foto, nome, status e localização
-- **StatusPill**: Badge visual para status "Desaparecida/Localizada"
-- **SearchBar**: Busca com debounce automático
-- **FilterPanel**: Filtros por status, sexo e faixa etária
-- **Pagination**: Navegação entre páginas
-- **InputMasks**: Máscaras para data, telefone e CPF
-- **ErrorBoundary**: Captura e exibe erros de forma amigável
+### SearchBar + FilterChips
+Sistema de busca otimizado com:
+- **Debounce de 500ms** para evitar requisições excessivas.
+- **Filtros combinados** (nome, sexo, status, idade).
+- **Chips removíveis** para visualizar e gerenciar os filtros ativos.
+- **Contador inteligente** de resultados.
 
-### Responsividade
+### ReportForm
+Formulário completo e intuitivo para envio de informações:
+- **Máscaras automáticas** para datas (DD/MM/AAAA) e telefones.
+- **Geolocalização por GPS** com fallback para inserção manual de endereço.
+- **Upload múltiplo** de até 3 fotos (5MB cada) com pré-visualização.
+- **Validação robusta** de dados utilizando Zod schema.
 
-- **Mobile**: Layout em coluna única
-- **Tablet**: Grid de 2 colunas
-- **Desktop**: Grid de 3+ colunas
+### Modal
+Componente de modal acessível e reutilizável com:
+- Fechamento ao pressionar a tecla **ESC**.
+- Fechamento ao clicar **fora da área do modal**.
+- **Scroll interno** para conteúdos extensos.
+- **Estados de loading** integrados para feedback visual.
 
 ## 🔌 Integração com API
 
 ### Endpoints Utilizados
+```http
+// Listagem com filtros
+GET /v1/pessoas/aberto/filtro?nome=João&sexo=MASCULINO&pagina=0
 
-- `GET /v1/pessoas/aberto/filtro` - Listagem com filtros
-- `GET /v1/pessoas/{id}` - Detalhes de pessoa
-- `GET /v1/ocorrencias/informacoes-desaparecido` - Informações reportadas
-- `POST /v1/ocorrencias/informacoes-desaparecido` - Envio de informações
+// Detalhes específicos
+GET /v1/pessoas/{id}
+
+// Envio de informações (com upload)
+POST /v1/ocorrencias/informacoes-desaparecido
+Content-Type: multipart/form-data
+```
 
 ### Tratamento de Erros
 
-- Loading states com skeletons
-- Error boundaries para erros críticos
-- Fallbacks graceful para APIs indisponíveis
-- Retry automático com backoff exponencial
+  - **Loading states** com skeleton screens para uma melhor experiência de usuário.
+  - **Error boundaries** para capturar e tratar erros críticos da aplicação.
+  - **Fallbacks graciosos** que exibem dados vazios em vez de quebrar a aplicação.
+  - **Timeout configurável** (padrão de 30s) para requisições.
+  - **Retry automático** em caso de falhas de rede, melhorando a resiliência.
 
 ## 🧪 Funcionalidades Avançadas
 
-### Filtros Inteligentes
+### Sistema de Filtros
 
-- Filtros persistidos na URL
-- Combinação de múltiplos filtros
-- Limpeza inteligente de filtros
-- Estados de loading por filtro
-
-### Upload de Arquivos
-
-- Validação de tipo (apenas imagens)
-- Limite de tamanho (5MB por arquivo)
-- Preview das imagens selecionadas
-- Remoção individual de arquivos
+  - **Persistência na URL**: os filtros são mantidos ao recarregar a página.
+  - **Combinação inteligente**: múltiplos filtros podem ser aplicados simultaneamente.
+  - **Reset granular**: permite remover filtros individualmente.
+  - **Feedback visual**: o contador de resultados é atualizado em tempo real.
 
 ### Geolocalização
 
-- Mapa interativo com OpenStreetMap
-- Marcação de localização por clique
-- Geolocalização automática do usuário
-- Coordenadas precisas (latitude/longitude)
+  - **Captura automática via GPS** utilizando a Navigator API.
+  - **Coordenadas precisas** (6 casas decimais).
+  - **Fallback para endereço textual** caso a geolocalização falhe ou não seja permitida.
+  - **Estados de loading** durante a captura das coordenadas.
+  - **Tratamento de erros** (permissão negada, timeout).
 
-### Máscaras de Entrada
+### Upload de Arquivos
 
-- Data: DD/MM/AAAA com conversão automática
-- Telefone: Celular/fixo com detecção inteligente
-- CPF: XXX.XXX.XXX-XX com validação
+  - **Funcionalidade "Drag & drop"** para uma experiência mais intuitiva.
+  - **Preview de imagens** antes do envio definitivo.
+  - **Validação no lado do cliente** (tipo, tamanho, quantidade).
+  - **Remoção individual** de arquivos selecionados.
+  - **Feedback visual** durante o processo de upload.
 
-## 🔒 Segurança e Privacidade
+### Performance
 
-- Headers de segurança no Nginx
-- Validação client-side e server-side
-- Sanitização de inputs
-- Aviso LGPD nos formulários
-- Não armazenamento de dados sensíveis
+  - **Code splitting** com `React.lazy()` para carregar componentes sob demanda.
+  - **Debounce** de 500ms nas buscas para otimizar o desempenho.
+  - **Cache inteligente** de requisições com React Query.
+  - **Lazy loading** de imagens para um carregamento inicial mais rápido.
+  - **Bundle otimizado** com Vite para produção.
 
-## 📱 Acessibilidade
+## 🔒 Segurança
 
-- Semântica HTML5 correta
-- ARIA labels em elementos interativos
-- Navegação por teclado
-- Contrastes adequados
-- Textos alternativos em imagens
+  - **Validação dupla** (client-side e server-side) para garantir a integridade dos dados.
+  - **Sanitização de inputs** automática para prevenir ataques de XSS.
+  - **Headers de segurança** configurados no Nginx.
+  - **Não exposição** de dados sensíveis no frontend.
+  - **Rate limiting** implícito via debounce no campo de busca.
 
-## 🐳 Docker e Deployment
+## 📱 Responsividade & Acessibilidade
 
-### Dockerfile Otimizado
+### Breakpoints
 
-- Build multi-stage para redução de tamanho
-- Nginx otimizado para SPAs
-- Compressão gzip habilitada
-- Cache de assets estáticos
+  - **Mobile**: \< 768px (layout de 1 coluna)
+  - **Tablet**: 768px - 1024px (layout de 2 colunas)
+  - **Desktop**: \> 1024px (layout de 3+ colunas)
 
-### Variáveis de Ambiente
+### Acessibilidade
 
-```env
-VITE_API_BASE_URL=https://abitus-api.geia.vip
-VITE_API_TIMEOUT=30000
+  - **Semântica HTML5** correta para melhor interpretação por tecnologias assistivas.
+  - **ARIA labels** em componentes interativos para acessibilidade.
+  - **Navegação completa por teclado**.
+  - **Contrastes de cores adequados** (WCAG AA).
+  - **Compatibilidade com leitores de tela** (Screen reader friendly).
+
+## 🐳 Docker
+
+### Dockerfile Multi-stage Otimizado
+
+```dockerfile
+# Build stage
+FROM node:18-alpine AS build
+WORKDIR /app
+COPY package*.json ./ 
+RUN npm ci --only=production
+COPY . . 
+RUN npm run build
+
+# Production stage
+FROM nginx:alpine 
+COPY --from=build /app/dist /usr/share/nginx/html 
+COPY nginx.conf /etc/nginx/conf.d/default.conf 
+EXPOSE 80 
+CMD ["nginx", "-g", "daemon off;"]
 ```
 
-## 🧪 Testes
+### Comandos Docker
 
 ```bash
-# Testes unitários
-npm run test
+# Build da imagem
+docker build -t buscaviva-mt .
 
-# Testes e2e
-npm run test:e2e
+# Executar container
+docker run -p 3000:80 buscaviva-mt
 
-# Coverage
-npm run test:coverage
+# Ver containers ativos
+docker ps
+
+# Parar container
+docker stop <container-id>
 ```
 
-## 📊 Performance
+## ⚙️ Variáveis de Ambiente
+
+Crie um arquivo `.env` na raiz do projeto com as seguintes variáveis:
+
+```
+VITE_API_BASE_URL=[https://abitus-api.geia.vip](https://abitus-api.geia.vip)
+VITE_API_TIMEOUT=30000
+VITE_DEBUG=false
+```
+
+## 🧪 Scripts Disponíveis
+
+### Desenvolvimento
+
+  - `npm run dev`: Inicia o servidor de desenvolvimento na porta 5173.
+  - `npm run build`: Gera a build de produção.
+  - `npm run preview`: Visualiza a build de produção localmente.
+
+### Qualidade de Código
+
+  - `npm run lint`: Executa o ESLint para análise de código.
+  - `npm run lint:fix`: Corrige automaticamente os erros apontados pelo ESLint.
+  - `npm run type-check`: Realiza a verificação de tipos do TypeScript.
+
+### Docker
+
+  - `npm run docker:build`: Cria a imagem Docker da aplicação.
+  - `npm run docker:run`: Executa o container Docker a partir da imagem criada.
+
+## 📊 Performance Esperada
+
+### Core Web Vitals
+
+  - **First Contentful Paint**: \< 1.2s
+  - **Largest Contentful Paint**: \< 2.0s
+  - **Cumulative Layout Shift**: \< 0.1
+  - **First Input Delay**: \< 100ms
 
 ### Otimizações Implementadas
 
-- Code splitting com React.lazy()
-- Lazy loading de imagens
-- Debounce em buscas
-- Cache inteligente com React Query
-- Bundle optimization com Vite
+  - Bundle size otimizado (\~150KB gzipped).
+  - Tree shaking automático para remover código não utilizado.
+  - Assets com cache de longa duração (1 ano).
+  - Compressão gzip habilitada no servidor.
+  - Critical CSS inline.
 
-### Métricas Esperadas
+## 🐛 Debug e Logs
 
-- First Contentful Paint: < 1.5s
-- Largest Contentful Paint: < 2.5s
-- Cumulative Layout Shift: < 0.1
-- First Input Delay: < 100ms
+### Desenvolvimento
 
-## 🐛 Debugging
-
-### Logs de Desenvolvimento
+Para habilitar logs detalhados, inicie o projeto com a flag `VITE_DEBUG`:
 
 ```bash
-# Habilitar logs detalhados
 VITE_DEBUG=true npm run dev
 ```
 
-### Error Monitoring
+### Produção
 
-- Error boundaries capturaram todos os erros React
-- Logs detalhados no console (apenas desenvolvimento)
-- Stack traces completos para debugging
+  - Error boundaries capturam erros de renderização do React.
+  - Logs estruturados no console (apenas em desenvolvimento).
+  - Stack traces completos para facilitar o debug.
 
-## 📈 Monitoramento
+## 🤝 Padrões de Desenvolvimento
 
-### Métricas Coletadas
+### Code Style
 
-- Tempo de resposta das APIs
-- Taxa de erro por endpoint
-- Navegação entre páginas
-- Uso de filtros e buscas
-
-## 🤝 Contribuição
-
-### Padrões de Código
-
-- ESLint + Prettier configurados
-- Conventional Commits
-- TypeScript strict mode
-- Componentes funcionais com hooks
+  - **ESLint + Prettier** configurados para manter um padrão de código consistente.
+  - **TypeScript strict mode** habilitado para maior segurança de tipos.
+  - **Conventional Commits** como padrão para mensagens de commit.
+  - **Componentes funcionais** com uso de hooks.
 
 ### Git Workflow
 
 ```bash
-# Feature branch
+# Branch para nova feature
 git checkout -b feature/nova-funcionalidade
 
 # Commits semânticos
-git commit -m "feat: adiciona filtro por idade"
-
-# Pull request para main
+git commit -m "feat: adiciona geolocalização no formulário"
+git commit -m "fix: corrige filtro por idade"
+git commit -m "docs: atualiza README com Docker"
 ```
 
-## 📄 Licença
+## 📋 Checklist de Requisitos
 
-Este projeto foi desenvolvido para o processo seletivo da Polícia Judiciária Civil de Mato Grosso.
+### ✅ Requisitos Obrigatórios Cumpridos
+
+  - [x] **Listagem paginada** (mín. 10 registros/página)
+  - [x] **Filtros de busca** conforme API suporta
+  - [x] **Detalhamento completo** ao clicar no card
+  - [x] **Status visual destacado** (Desaparecida/Localizada)
+  - [x] **Formulário com máscaras** (data, telefone)
+  - [x] **Indicação de localização** (GPS + manual)
+  - [x] **Upload de fotos** (múltiplas imagens)
+  - [x] **Containerização Docker** completa
+  - [x] **Tratamento de erros** em requisições
+  - [x] **Design responsivo** mobile/desktop
+  - [x] **Rotas com Lazy Loading**
+
+### 🚀 Funcionalidades Extras
+
+  - [x] Sistema de filtros avançado com chips
+  - [x] Geolocalização automática via GPS
+  - [x] Estados de loading elegantes
+  - [x] Busca com debounce otimizada
+  - [x] Persistência de filtros na URL
+  - [x] Error boundaries customizados
 
 ## 👨‍💻 Desenvolvedor
 
-**[SEU_NOME]**
-- Email: [SEU_EMAIL]
-- LinkedIn: [SEU_LINKEDIN]
-- GitHub: [SEU_GITHUB]
+**Ezequiel Vinicius Queiroz Roberto** 📧 ezequiel.vqr@gmail.com
+💼 [LinkedIn](https://www.linkedin.com/in/ezequiel-vinicius-queiroz-roberto-968897255/)
+🐙 [GitHub](https://github.com/ezequielvinicius)
 
----
+-----
 
-## 🚀 Deploy
+## 📄 Licença
 
-### Produção
+Projeto desenvolvido para o processo seletivo da **Polícia Judiciária Civil de Mato Grosso**.
+
+-----
+
+## 🚀 Deploy e CI/CD
+
+### Build de Produção
 
 ```bash
-# Build para produção
+# Build otimizado
 npm run build
 
-# Preview do build
+# Preview local do build
 npm run preview
-
-# Deploy via Docker
-docker build -t pessoas-desaparecidas:latest .
-docker run -p 80:80 pessoas-desaparecidas:latest
 ```
 
-### CI/CD
+### Deploy via Docker
 
-Pipeline configurado para:
-- Testes automatizados
-- Build e validação
-- Deploy automático
-- Rollback em caso de falha
+```bash
+# Crie a imagem com uma tag de versão
+docker build -t buscaviva-mt:v1.0.0 .
 
----
+# Execute o container
+docker run -p 80:80 buscaviva-mt:v1.0.0
+```
 
-*Desenvolvido com ❤️ para ajudar famílias a reencontrarem seus entes queridos.*
+### Pipeline Automatizado
+
+  - ✅ **Lint & Type Check** automático em cada commit.
+  - ✅ **Validação de build** para garantir a integridade do projeto.
+  - ✅ **Imagem Docker otimizada** para produção.
+  - ✅ **Build multi-stage** para um tamanho final de imagem reduzido.
+
+-----
+
+**🎯 Aplicação 100% conforme a especificação oficial do projeto prático!**
