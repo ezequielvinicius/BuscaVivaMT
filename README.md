@@ -1,5 +1,5 @@
 
-# buscavivaMT - Sistema de Consulta de Pessoas Desaparecidas
+# BuscaVivaMT - Sistema de Consulta de Pessoas Desaparecidas
 
 Sistema web desenvolvido para a consulta de pessoas desaparecidas e o envio colaborativo de informações, conforme a especificação da Polícia Judiciária Civil de Mato Grosso.
 
