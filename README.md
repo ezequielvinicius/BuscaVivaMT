@@ -383,7 +383,7 @@ git commit -m "docs: atualiza README com Docker"
 ## 👨‍💻 Desenvolvedor
 
 **Ezequiel Vinicius Queiroz Roberto** 📧 ezequiel.vqr@gmail.com
-💼 [LinkedIn](https://www.linkedin.com/in/ezequiel-vinicius-queiroz-roberto-968897255/)
+💼 [LinkedIn](www.linkedin.com/in/ezequielvinicius)
 🐙 [GitHub](https://github.com/ezequielvinicius)
 
 -----
