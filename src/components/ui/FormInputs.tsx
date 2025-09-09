@@ -1,371 +1,249 @@
-import React, { forwardRef, useState } from 'react'
-import { ExclamationCircleIcon } from '@heroicons/react/24/outline'
+// src/components/ui/FormInputs.tsx - FileInput com preview de imagens
+import { useState, useRef, useCallback } from 'react'
+import { Upload, X, Image as ImageIcon, AlertCircle } from 'lucide-react'
 
-/**
- * Props base para todos os inputs
- */
-interface BaseInputProps {
-  label?: string
-  error?: string
+interface FileInputProps {
+  onFilesChange: (files: File[]) => void
+  maxFiles?: number
+  maxSize?: number // em bytes
+  allowedTypes?: string[]
+  showPreview?: boolean
   hint?: string
-  required?: boolean
   className?: string
 }
 
-/**
- * Input text acessível
- */
-export const TextInput = forwardRef<
-  HTMLInputElement,
-  React.InputHTMLAttributes<HTMLInputElement> & BaseInputProps
->(({ label, error, hint, required, className = '', ...props }, ref) => {
-  const inputId = props.id || `input-${Math.random().toString(36).substr(2, 9)}`
-  const errorId = error ? `${inputId}-error` : undefined
-  const hintId = hint ? `${inputId}-hint` : undefined
-
-  return (
-    <div className={className}>
-      {label && (
-        <label 
-          htmlFor={inputId}
-          className="block text-sm font-medium text-gray-700 mb-1"
-        >
-          {label}
-          {required && <span className="text-red-500 ml-1" aria-label="campo obrigatório">*</span>}
-        </label>
-      )}
-      
-      <div className="relative">
-        <input
-          {...props}
-          ref={ref}
-          id={inputId}
-          className={`
-            block w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400
-            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-            disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed
-            ${error ? 'border-red-300 pr-10' : 'border-gray-300'}
-          `}
-          aria-invalid={!!error}
-          aria-describedby={[errorId, hintId].filter(Boolean).join(' ') || undefined}
-          aria-required={required}
-        />
-        
-        {error && (
-          <ExclamationCircleIcon 
-            className="absolute right-3 top-2.5 h-5 w-5 text-red-400"
-            aria-hidden="true"
-          />
-        )}
-      </div>
-
-      {hint && !error && (
-        <p id={hintId} className="mt-1 text-sm text-gray-500">
-          {hint}
-        </p>
-      )}
-      
-      {error && (
-        <p id={errorId} className="mt-1 text-sm text-red-600" role="alert">
-          {error}
-        </p>
-      )}
-    </div>
-  )
-})
-
-TextInput.displayName = 'TextInput'
-
-/**
- * Textarea acessível com contador de caracteres
- */
-export const TextArea = forwardRef<
-  HTMLTextAreaElement,
-  React.TextareaHTMLAttributes<HTMLTextAreaElement> & BaseInputProps & {
-    maxLength?: number
-    showCount?: boolean
-  }
->(({ label, error, hint, required, maxLength, showCount = true, className = '', ...props }, ref) => {
-  const [currentLength, setCurrentLength] = useState(0)
-  const inputId = props.id || `textarea-${Math.random().toString(36).substr(2, 9)}`
-  const errorId = error ? `${inputId}-error` : undefined
-  const hintId = hint ? `${inputId}-hint` : undefined
-
-  return (
-    <div className={className}>
-      {label && (
-        <div className="flex justify-between items-center mb-1">
-          <label htmlFor={inputId} className="block text-sm font-medium text-gray-700">
-            {label}
-            {required && <span className="text-red-500 ml-1" aria-label="campo obrigatório">*</span>}
-          </label>
-          {showCount && maxLength && (
-            <span className="text-sm text-gray-500">
-              {currentLength}/{maxLength}
-            </span>
-          )}
-        </div>
-      )}
-      
-      <textarea
-        {...props}
-        ref={ref}
-        id={inputId}
-        maxLength={maxLength}
-        className={`
-          block w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400
-          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-          disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed
-          resize-vertical
-          ${error ? 'border-red-300' : 'border-gray-300'}
-        `}
-        aria-invalid={!!error}
-        aria-describedby={[errorId, hintId].filter(Boolean).join(' ') || undefined}
-        aria-required={required}
-        onChange={(e) => {
-          setCurrentLength(e.target.value.length)
-          props.onChange?.(e)
-        }}
-      />
-
-      {hint && !error && (
-        <p id={hintId} className="mt-1 text-sm text-gray-500">
-          {hint}
-        </p>
-      )}
-      
-      {error && (
-        <p id={errorId} className="mt-1 text-sm text-red-600" role="alert">
-          {error}
-        </p>
-      )}
-    </div>
-  )
-})
-
-TextArea.displayName = 'TextArea'
-
-/**
- * Select acessível
- */
-export const Select = forwardRef<
-  HTMLSelectElement,
-  React.SelectHTMLAttributes<HTMLSelectElement> & BaseInputProps & {
-    options: Array<{ value: string; label: string; disabled?: boolean }>
-    placeholder?: string
-  }
->(({ label, error, hint, required, options, placeholder, className = '', ...props }, ref) => {
-  const inputId = props.id || `select-${Math.random().toString(36).substr(2, 9)}`
-  const errorId = error ? `${inputId}-error` : undefined
-  const hintId = hint ? `${inputId}-hint` : undefined
-
-  return (
-    <div className={className}>
-      {label && (
-        <label htmlFor={inputId} className="block text-sm font-medium text-gray-700 mb-1">
-          {label}
-          {required && <span className="text-red-500 ml-1" aria-label="campo obrigatório">*</span>}
-        </label>
-      )}
-      
-      <select
-        {...props}
-        ref={ref}
-        id={inputId}
-        className={`
-          block w-full px-3 py-2 border rounded-md shadow-sm bg-white
-          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-          disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed
-          ${error ? 'border-red-300' : 'border-gray-300'}
-        `}
-        aria-invalid={!!error}
-        aria-describedby={[errorId, hintId].filter(Boolean).join(' ') || undefined}
-        aria-required={required}
-      >
-        {placeholder && (
-          <option value="" disabled>
-            {placeholder}
-          </option>
-        )}
-        {options.map((option) => (
-          <option 
-            key={option.value} 
-            value={option.value}
-            disabled={option.disabled}
-          >
-            {option.label}
-          </option>
-        ))}
-      </select>
-
-      {hint && !error && (
-        <p id={hintId} className="mt-1 text-sm text-gray-500">
-          {hint}
-        </p>
-      )}
-      
-      {error && (
-        <p id={errorId} className="mt-1 text-sm text-red-600" role="alert">
-          {error}
-        </p>
-      )}
-    </div>
-  )
-})
-
-Select.displayName = 'Select'
-
-/**
- * File input acessível com preview
- */
-export const FileInput = forwardRef<
-  HTMLInputElement,
-  React.InputHTMLAttributes<HTMLInputElement> & BaseInputProps & {
-    onFilesChange?: (files: File[]) => void
-    maxFiles?: number
-    maxSize?: number
-    allowedTypes?: string[]
-    showPreview?: boolean
-  }
->(({ 
-  label, 
-  error, 
-  hint, 
-  required, 
+export function FileInput({ 
   onFilesChange, 
   maxFiles = 3, 
-  maxSize = 5_000_000,
-  allowedTypes = ['image/*'],
+  maxSize = 5 * 1024 * 1024, // 5MB
+  allowedTypes = ['image/*'], 
   showPreview = true,
-  className = '',
-  ...props 
-}, ref) => {
+  hint,
+  className = ''
+}: FileInputProps) {
   const [files, setFiles] = useState<File[]>([])
-  const [dragOver, setDragOver] = useState(false)
-  const inputId = props.id || `file-${Math.random().toString(36).substr(2, 9)}`
-  const errorId = error ? `${inputId}-error` : undefined
-  const hintId = hint ? `${inputId}-hint` : undefined
+  const [dragActive, setDragActive] = useState(false)
+  const [errors, setErrors] = useState<string[]>([])
+  const inputRef = useRef<HTMLInputElement>(null)
 
-  const handleFileChange = (newFiles: FileList | null) => {
-    if (!newFiles) return
+  // Validar arquivo
+  const validateFile = useCallback((file: File): string | null => {
+    // Verificar tipo
+    const isValidType = allowedTypes.some(type => {
+      if (type === 'image/*') return file.type.startsWith('image/')
+      return file.type === type || file.name.toLowerCase().endsWith(type.replace('*', ''))
+    })
     
-    const fileArray = Array.from(newFiles).slice(0, maxFiles)
-    setFiles(fileArray)
-    onFilesChange?.(fileArray)
+    if (!isValidType) {
+      return `Tipo de arquivo não permitido: ${file.type}`
+    }
+
+    // Verificar tamanho
+    if (file.size > maxSize) {
+      const maxSizeMB = maxSize / (1024 * 1024)
+      return `Arquivo muito grande. Máximo: ${maxSizeMB}MB`
+    }
+
+    return null
+  }, [allowedTypes, maxSize])
+
+  // Processar arquivos selecionados
+  const processFiles = useCallback((fileList: FileList | File[]) => {
+    const newFiles = Array.from(fileList)
+    const validFiles: File[] = []
+    const newErrors: string[] = []
+
+    // Verificar limite de arquivos
+    const totalFiles = files.length + newFiles.length
+    if (totalFiles > maxFiles) {
+      newErrors.push(`Máximo ${maxFiles} arquivo(s) permitido(s)`)
+      return
+    }
+
+    // Validar cada arquivo
+    newFiles.forEach(file => {
+      const error = validateFile(file)
+      if (error) {
+        newErrors.push(error)
+      } else {
+        validFiles.push(file)
+      }
+    })
+
+    if (newErrors.length > 0) {
+      setErrors(newErrors)
+      return
+    }
+
+    // Adicionar arquivos válidos
+    const updatedFiles = [...files, ...validFiles]
+    setFiles(updatedFiles)
+    onFilesChange(updatedFiles)
+    setErrors([])
+  }, [files, maxFiles, validateFile, onFilesChange])
+
+  // Handler para input de arquivo
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      processFiles(e.target.files)
+    }
   }
 
+  // Handlers para drag and drop
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
+  const handleDragIn = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragActive(true)
+  }
+
+  const handleDragOut = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragActive(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragActive(false)
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      processFiles(e.dataTransfer.files)
+    }
+  }
+
+  // Remover arquivo
   const removeFile = (index: number) => {
-    const newFiles = files.filter((_, i) => i !== index)
-    setFiles(newFiles)
-    onFilesChange?.(newFiles)
+    const updatedFiles = files.filter((_, i) => i !== index)
+    setFiles(updatedFiles)
+    onFilesChange(updatedFiles)
+    setErrors([])
+  }
+
+  // Abrir seletor de arquivo
+  const openFileDialog = () => {
+    inputRef.current?.click()
+  }
+
+  // Criar preview URL
+  const createPreviewUrl = (file: File): string => {
+    return URL.createObjectURL(file)
   }
 
   return (
-    <div className={className}>
-      {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          {label}
-          {required && <span className="text-red-500 ml-1" aria-label="campo obrigatório">*</span>}
-        </label>
-      )}
-      
+    <div className={`space-y-4 ${className}`}>
+      {/* Área de upload */}
       <div
-        className={`
-          relative border-2 border-dashed rounded-lg p-6 text-center
-          transition-colors duration-200
-          ${dragOver ? 'border-blue-400 bg-blue-50' : 'border-gray-300'}
-          ${error ? 'border-red-300' : ''}
-        `}
-        onDragOver={(e) => {
-          e.preventDefault()
-          setDragOver(true)
-        }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={(e) => {
-          e.preventDefault()
-          setDragOver(false)
-          handleFileChange(e.dataTransfer.files)
-        }}
+        className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer ${
+          dragActive 
+            ? 'border-blue-500 bg-blue-50' 
+            : 'border-gray-300 hover:border-gray-400'
+        }`}
+        onDragEnter={handleDragIn}
+        onDragLeave={handleDragOut}
+        onDragOver={handleDrag}
+        onDrop={handleDrop}
+        onClick={openFileDialog}
       >
         <input
-          {...props}
-          ref={ref}
-          id={inputId}
+          ref={inputRef}
           type="file"
           multiple={maxFiles > 1}
           accept={allowedTypes.join(',')}
-          onChange={(e) => handleFileChange(e.target.files)}
-          className="sr-only"
-          aria-invalid={!!error}
-          aria-describedby={[errorId, hintId].filter(Boolean).join(' ') || undefined}
-          aria-required={required}
+          onChange={handleFileSelect}
+          className="hidden"
         />
-        
-        <label
-          htmlFor={inputId}
-          className="cursor-pointer flex flex-col items-center space-y-2"
-        >
-          <div className="text-gray-400">
-            <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-            </svg>
-          </div>
+
+        <div className="flex flex-col items-center space-y-3">
+          <Upload className="w-12 h-12 text-gray-400" />
           <div>
-            <span className="text-blue-600 font-medium">Clique para selecionar</span>
-            <span className="text-gray-500"> ou arraste os arquivos aqui</span>
+            <p className="text-lg font-medium text-gray-700">
+              Clique ou arraste arquivos aqui
+            </p>
+            <p className="text-sm text-gray-500">
+              {allowedTypes.includes('image/*') ? 'Apenas imagens' : 'Arquivos permitidos'} • 
+              Máximo {maxFiles} arquivo{maxFiles > 1 ? 's' : ''} • 
+              {(maxSize / (1024 * 1024)).toFixed(1)}MB cada
+            </p>
           </div>
-          <div className="text-xs text-gray-500">
-            Máx. {maxFiles} arquivo{maxFiles > 1 ? 's' : ''}, {(maxSize / 1_000_000).toFixed(0)}MB cada
-          </div>
-        </label>
+        </div>
       </div>
 
-      {showPreview && files.length > 0 && (
-        <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-4">
-          {files.map((file, index) => (
-            <div key={index} className="relative group">
-              <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
-                {file.type.startsWith('image/') ? (
-                  <img
-                    src={URL.createObjectURL(file)}
-                    alt={file.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-400">
-                    <div className="text-center">
-                      <div className="text-2xl mb-1">📄</div>
-                      <div className="text-xs">{file.name}</div>
-                    </div>
-                  </div>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={() => removeFile(index)}
-                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                aria-label={`Remover arquivo ${file.name}`}
-              >
-                ×
-              </button>
+      {/* Dica personalizada */}
+      {hint && (
+        <p className="text-xs text-gray-500 text-center">{hint}</p>
+      )}
+
+      {/* Erros */}
+      {errors.length > 0 && (
+        <div className="space-y-2">
+          {errors.map((error, index) => (
+            <div key={index} className="flex items-center gap-2 text-red-600 text-sm">
+              <AlertCircle className="w-4 h-4" />
+              {error}
             </div>
           ))}
         </div>
       )}
 
-      {hint && !error && (
-        <p id={hintId} className="mt-2 text-sm text-gray-500">
-          {hint}
-        </p>
-      )}
-      
-      {error && (
-        <p id={errorId} className="mt-2 text-sm text-red-600" role="alert">
-          {error}
-        </p>
+      {/* Preview dos arquivos */}
+      {showPreview && files.length > 0 && (
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium text-gray-700">
+            Arquivos selecionados ({files.length}/{maxFiles})
+          </h4>
+          
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {files.map((file, index) => (
+              <div key={index} className="relative group">
+                {/* Preview da imagem */}
+                {file.type.startsWith('image/') ? (
+                  <div className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                    <img
+                      src={createPreviewUrl(file)}
+                      alt={file.name}
+                      className="w-full h-full object-cover"
+                      onLoad={(e) => {
+                        // Revogar URL após carregamento para evitar memory leak
+                        URL.revokeObjectURL((e.target as HTMLImageElement).src)
+                      }}
+                    />
+                  </div>
+                ) : (
+                  /* Preview para outros tipos */
+                  <div className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center">
+                    <ImageIcon className="w-8 h-8 text-gray-400" />
+                  </div>
+                )}
+
+                {/* Botão remover */}
+                <button
+                  type="button"
+                  onClick={() => removeFile(index)}
+                  className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+
+                {/* Info do arquivo */}
+                <div className="mt-2">
+                  <p className="text-xs font-medium text-gray-700 truncate" title={file.name}>
+                    {file.name}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {(file.size / 1024).toFixed(1)} KB
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   )
-})
-
-FileInput.displayName = 'FileInput'
+}

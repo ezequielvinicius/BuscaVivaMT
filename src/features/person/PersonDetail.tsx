@@ -5,24 +5,24 @@ import { usePessoa } from '@/hooks/usePessoa'
 import { LoadingStates } from '@/components/ui/LoadingStates'
 import { StatusPill } from '@/components/ui/StatusPill'
 import { Modal } from '@/components/ui/Modal'
-import { ReportForm } from '@/features/person/ReportForm' // ✅ Ajuste o path se necessário
+import { ReportForm } from '@/features/person/ReportForm'
 
 export function PersonDetail() {
   const { id } = useParams<{ id: string }>()
   const { data: pessoa, isLoading, isError } = usePessoa(id || '')
   
-  // ✅ Estado do modal
+  //Estado do modal
   const [showReportModal, setShowReportModal] = useState(false)
 
-  // ✅ Handler do botão (trocar alert pelo modal)
+  //Handler do botão (trocar alert pelo modal)
   const handleReportInfo = () => {
     setShowReportModal(true)
   }
 
-  // ✅ Handler de sucesso
+  //Handler de sucesso
   const handleReportSuccess = () => {
     setShowReportModal(false)
-    alert('✅ Informação enviada com sucesso! Obrigado por colaborar.')
+    alert('Informação enviada com sucesso! Obrigado por colaborar.')
   }
 
   const handleShare = async () => {
@@ -87,7 +87,7 @@ export function PersonDetail() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* ✅ Header com navegação */}
+      {/*Header com navegação */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -110,10 +110,10 @@ export function PersonDetail() {
         </div>
       </div>
 
-      {/* ✅ Conteúdo principal */}
+      {/*Conteúdo principal */}
       <div className="max-w-4xl mx-auto px-4 py-8 space-y-8">
         
-        {/* ✅ Card principal: Foto + Informações */}
+        {/*Card principal: Foto + Informações */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="p-6 md:p-8">
             <div className="flex flex-col md:flex-row gap-6">
@@ -187,7 +187,7 @@ export function PersonDetail() {
           </div>
         </div>
 
-        {/* ✅ Informações detalhadas organizadas */}
+        {/*Informações detalhadas organizadas */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 md:p-8">
           <h2 className="text-xl font-bold text-gray-900 mb-6">Informações Detalhadas</h2>
           
@@ -246,7 +246,7 @@ export function PersonDetail() {
           </div>
         </div>
 
-        {/* ✅ Galeria de cartazes */}
+        {/*Galeria de cartazes */}
         {Array.isArray(pessoa.cartazes) && pessoa.cartazes.length > 0 && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 md:p-8">
             <h2 className="text-xl font-bold text-gray-900 mb-6">Cartazes de Divulgação</h2>
@@ -277,7 +277,7 @@ export function PersonDetail() {
           </div>
         )}
 
-        {/* ✅ Call-to-action com botão funcional */}
+        {/*Call-to-action com botão funcional */}
         {pessoa.status === 'DESAPARECIDO' && (
           <div className="bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 rounded-xl shadow-lg p-8 text-center text-white relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-black/10 pointer-events-none"></div>
@@ -297,7 +297,7 @@ export function PersonDetail() {
               </p>
               
               <button
-                onClick={handleReportInfo} // ✅ Agora abre o modal
+                onClick={handleReportInfo} //Agora abre o modal
                 className="bg-white text-blue-600 hover:bg-blue-50 px-8 py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-200 inline-flex items-center gap-3 group"
               >
                 <Lightbulb className="w-6 h-6 group-hover:scale-110 transition-transform" />
@@ -312,7 +312,7 @@ export function PersonDetail() {
         )}
       </div>
 
-      {/* ✅ Modal com formulário */}
+      {/*Modal com formulário */}
       {showReportModal && (
         <Modal 
           isOpen={showReportModal} 

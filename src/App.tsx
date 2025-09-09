@@ -5,6 +5,9 @@ import { MobileHeader } from '@/components/layout/MobileHeader'
 import { AppRoutes } from '@/app/routes'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 
+import { ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
+
 function App() {
   return (
     <ErrorBoundary>
@@ -22,6 +25,19 @@ function App() {
           <main className="relative">
             <AppRoutes />
           </main>
+
+          <ToastContainer
+            position="top-right"
+            autoClose={4000}
+            hideProgressBar={false}
+            newestOnTop={false}
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            theme="light"
+          />
         </div>
       </QueryClientProvider>
     </ErrorBoundary>

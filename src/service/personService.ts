@@ -8,6 +8,8 @@ import {
   adaptPersonToDetail,
   adaptPersonToListItem
 } from './adapters/personAdapter'
+import { de } from 'zod/v4/locales'
+
 
 export async function listPessoas(filtros: Partial<FiltroParams> = {}): Promise<PaginatedResponse<PersonListItem>> {
   try {
@@ -23,39 +25,11 @@ export async function listPessoas(filtros: Partial<FiltroParams> = {}): Promise<
       params: cleanFilters
     })
 
-    const result = adaptPaginatedResponse(data)
-    
-    // ✅ FILTRO CLIENT-SIDE simples para corrigir inconsistências
-    if (filtros.status && filtros.status !== 'Todos') {
-      const pessoasFiltradas = result.content.filter(pessoa => {
-        return pessoa.status === filtros.status
-      })
-      
-      console.log(`🔧 Filtro client-side ${filtros.status}: ${result.content.length} → ${pessoasFiltradas.length}`)
-      
-      return {
-        ...result,
-        content: pessoasFiltradas,
-        numberOfElements: pessoasFiltradas.length,
-        empty: pessoasFiltradas.length === 0
-      }
-    }
-    
-    return result
+    return data
 
   } catch (error) {
-    console.error('❌ Erro:', error)
-    return {
-      content: [],
-      totalPages: 0,
-      totalElements: 0,
-      numberOfElements: 0,
-      currentPage: 0,
-      pageSize: 10,
-      first: true,
-      last: true,
-      empty: true
-    }
+    console.error('❌ Erro ao listar pessoas:', error)
+    throw error
   }
 }
 
@@ -93,3 +67,4 @@ export async function getPessoasDestaque(quantidade: number = 4): Promise<Person
     return []
   }
 }
+export default listPessoas

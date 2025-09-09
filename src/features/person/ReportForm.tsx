@@ -1,13 +1,16 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { MapPin, Camera, Send, User, Calendar, Phone, MessageSquare, Navigation } from 'lucide-react'
+import { MapPin, Camera, Send, User, Calendar, Phone, MessageSquare, Navigation, RotateCcw } from 'lucide-react'
 import { createInfoOcorrencia } from '@/service/ocorrenciasService'
 import { DateInput, PhoneInput } from '@/components/ui/InputMasks'
 import { FileInput } from '@/components/ui/FormInputs'
+import { toast } from 'react-toastify'
+import L from 'leaflet'
 
-// ✅ Schema de validação (mantém seu schema existente)
+import 'leaflet/dist/leaflet.css'
+
 const informationSchema = z.object({
   informacao: z
     .string({ required_error: 'Informação é obrigatória' })
@@ -60,9 +63,12 @@ interface ReportFormProps {
 export function ReportForm({ ocoId, personName, onSuccess, onCancel }: ReportFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   
-  // ✅ ADICIONADO: Estados para geolocalização
-  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null)
-  const [locationLoading, setLocationLoading] = useState(false)
+  // Estados para mapa e localização
+  const mapRef = useRef<HTMLDivElement>(null)
+  const mapInstanceRef = useRef<L.Map | null>(null)
+  const markerRef = useRef<L.Marker | null>(null)
+  const [selectedPosition, setSelectedPosition] = useState<{ lat: number; lng: number } | null>(null)
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false)
 
   const {
     control,
@@ -82,43 +88,137 @@ export function ReportForm({ ocoId, personName, onSuccess, onCancel }: ReportFor
     }
   })
 
-  // ✅ ADICIONADO: Função de geolocalização
+  // Inicializar mapa quando componente monta
+  useEffect(() => {
+    if (!mapRef.current || mapInstanceRef.current) return
+
+    // Criar instância do mapa
+    const map = L.map(mapRef.current).setView([-15.6014, -56.0979], 13) // Cuiabá, MT
+
+    // Adicionar camada de tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map)
+
+    // Configurar ícone customizado
+    const customIcon = L.icon({
+      iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+      iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
+      shadowSize: [41, 41],
+    })
+
+    // Evento de clique no mapa
+    map.on('click', (e: L.LeafletMouseEvent) => {
+      const { lat, lng } = e.latlng
+      
+      // Remover marker anterior
+      if (markerRef.current) {
+        map.removeLayer(markerRef.current)
+      }
+
+      // Adicionar novo marker
+      const newMarker = L.marker([lat, lng], { icon: customIcon }).addTo(map)
+      markerRef.current = newMarker
+
+      // Atualizar estado e formulário
+      const newPosition = { lat, lng }
+      setSelectedPosition(newPosition)
+      setValue('latitude', lat)
+      setValue('longitude', lng)
+      setValue('endereco', `Coordenadas: ${lat.toFixed(6)}, ${lng.toFixed(6)}`)
+
+      console.log('📍 Localização selecionada:', newPosition)
+    })
+
+    mapInstanceRef.current = map
+
+    // Cleanup quando componente desmonta
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove()
+        mapInstanceRef.current = null
+      }
+    }
+  }, [setValue])
+
+  // Obter localização atual do usuário
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
-      alert('Geolocalização não suportada neste navegador')
+      toast.error('Geolocalização não suportada neste navegador')
       return
     }
 
-    setLocationLoading(true)
+    setIsLoadingLocation(true)
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords
-        const newLocation = { lat: latitude, lng: longitude }
         
-        setLocation(newLocation)
+        if (mapInstanceRef.current) {
+          // Mover mapa para nova localização
+          mapInstanceRef.current.setView([latitude, longitude], 15)
+          
+          // Remover marker anterior
+          if (markerRef.current) {
+            mapInstanceRef.current.removeLayer(markerRef.current)
+          }
+
+          // Adicionar novo marker
+          const customIcon = L.icon({
+            iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+            iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
+            shadowSize: [41, 41],
+          })
+
+          const newMarker = L.marker([latitude, longitude], { icon: customIcon }).addTo(mapInstanceRef.current)
+          markerRef.current = newMarker
+        }
+        
+        const newPosition = { lat: latitude, lng: longitude }
+        setSelectedPosition(newPosition)
         setValue('latitude', latitude)
         setValue('longitude', longitude)
         setValue('endereco', `Coordenadas: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`)
-        setLocationLoading(false)
+        setIsLoadingLocation(false)
         
-        console.log('📍 Localização obtida:', newLocation)
+        toast.success('📍 Localização obtida com sucesso!')
+        console.log('📍 Localização GPS obtida:', newPosition)
       },
       (error) => {
         console.error('Erro ao obter localização:', error)
-        alert('Não foi possível obter sua localização. Você pode inserir o endereço manualmente.')
-        setLocationLoading(false)
+        toast.warning('Não foi possível obter sua localização. Clique no mapa para selecionar manualmente.')
+        setIsLoadingLocation(false)
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
     )
   }
 
-  // ✅ Converter data DD/MM/AAAA para AAAA-MM-DD (formato da API)
+  //  Resetar seleção no mapa
+  const resetLocation = () => {
+    if (mapInstanceRef.current && markerRef.current) {
+      mapInstanceRef.current.removeLayer(markerRef.current)
+      markerRef.current = null
+    }
+    setSelectedPosition(null)
+    setValue('latitude', undefined)
+    setValue('longitude', undefined)
+    setValue('endereco', '')
+  }
+
+  // Converter data DD/MM/AAAA para AAAA-MM-DD (formato da API)
   const convertDateToISO = (ddmmyyyy: string): string => {
     const [day, month, year] = ddmmyyyy.split('/')
     return `${year}-${month}-${day}`
   }
 
-  // ✅ Submissão do formulário (mantém sua lógica existente)
+  // Submissão do formulário
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true)
     
@@ -138,12 +238,15 @@ export function ReportForm({ ocoId, personName, onSuccess, onCancel }: ReportFor
       
       await createInfoOcorrencia(payload)
       
-      console.log('✅ Informação enviada com sucesso!')
+      console.log('Informação enviada com sucesso!')
+      toast.success('Informação enviada com sucesso! Obrigado por colaborar.', {
+        autoClose: 5000
+      })
       onSuccess()
       
     } catch (error) {
       console.error('❌ Erro ao enviar informação:', error)
-      alert('Erro ao enviar informação. Tente novamente.')
+      toast.error('❌ Erro ao enviar informação. Tente novamente.')
     } finally {
       setIsSubmitting(false)
     }
@@ -279,53 +382,94 @@ export function ReportForm({ ocoId, personName, onSuccess, onCancel }: ReportFor
           </div>
         </div>
 
-        {/* ✅ LOCALIZAÇÃO COM GEOLOCALIZAÇÃO */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            <MapPin className="w-4 h-4 inline mr-1" />
-            Local onde foi vista
-          </label>
-          <div className="space-y-3">
+        {/* MAPA INTERATIVO PARA SELEÇÃO DE LOCALIZAÇÃO */}
+        <div className="space-y-4">
+          
+          {/* Header com botões */}
+          <div className="flex items-center justify-between">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                <MapPin className="w-4 h-4 inline mr-1" />
+                Local onde a pessoa foi vista
+              </label>
+              <p className="text-xs text-gray-500">
+                Clique no mapa para marcar o local ou use sua localização atual
+              </p>
+            </div>
+            
+            {/* Botões de ação */}
             <div className="flex gap-2">
-              <input
-                type="text"
-                {...register('endereco')}
-                placeholder="Digite o endereço ou descrição do local..."
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
               <button
                 type="button"
                 onClick={getCurrentLocation}
-                disabled={locationLoading}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-md flex items-center gap-1 transition-colors flex-shrink-0"
+                disabled={isLoadingLocation}
+                className="flex items-center gap-1 px-3 py-2 text-sm bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-md transition-colors"
               >
-                {locationLoading ? (
+                {isLoadingLocation ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <Navigation className="w-4 h-4" />
                 )}
-                {locationLoading ? 'Obtendo...' : 'Minha localização'}
+                {isLoadingLocation ? 'Obtendo...' : 'Minha localização'}
               </button>
+              
+              {selectedPosition && (
+                <button
+                  type="button"
+                  onClick={resetLocation}
+                  className="flex items-center gap-1 px-3 py-2 text-sm bg-gray-500 hover:bg-gray-600 text-white rounded-md transition-colors"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  Limpar
+                </button>
+              )}
             </div>
+          </div>
+
+          {/* Container do mapa */}
+          <div className="relative border border-gray-300 rounded-lg overflow-hidden">
+            <div 
+              ref={mapRef} 
+              style={{ height: '300px', width: '100%' }}
+              className="leaflet-container" 
+            />
             
-            {location && (
-              <div className="text-xs text-green-600 bg-green-50 p-3 rounded-lg border border-green-200">
-                ✅ <strong>Localização capturada:</strong><br />
-                Latitude: {location.lat.toFixed(6)}<br />
-                Longitude: {location.lng.toFixed(6)}<br />
-                <span className="text-gray-600 mt-1 block">
-                  📍 Esta localização será enviada junto com suas informações
-                </span>
+            {/* Overlay com instruções */}
+            {!selectedPosition && (
+              <div className="absolute inset-0 bg-black/10 flex items-center justify-center pointer-events-none z-[1000]">
+                <div className="bg-white/90 px-4 py-2 rounded-lg shadow-lg">
+                  <p className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                    <MapPin className="w-4 h-4" />
+                    Clique no mapa para marcar o local
+                  </p>
+                </div>
               </div>
             )}
-            
-            {errors.endereco && (
-              <span className="text-xs text-red-600">{errors.endereco.message}</span>
-            )}
           </div>
+
+          {/* Informações da localização selecionada */}
+          {selectedPosition && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <MapPin className="w-5 h-5 text-green-600 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-green-800 mb-1">
+                   Localização selecionada
+                  </p>
+                  <div className="text-xs text-green-700 space-y-1">
+                    <p><strong>Latitude:</strong> {selectedPosition.lat.toFixed(6)}</p>
+                    <p><strong>Longitude:</strong> {selectedPosition.lng.toFixed(6)}</p>
+                    <p className="text-green-600">
+                      📍 Esta localização será enviada junto com suas informações
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Upload de fotos (mantém seu FileInput existente) */}
+        {/* Upload de fotos */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             <Camera className="w-4 h-4 inline mr-1" />

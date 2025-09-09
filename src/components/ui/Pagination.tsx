@@ -1,99 +1,114 @@
+// src/components/ui/Pagination.tsx - COMPONENTE CORRIGIDO
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+
 interface PaginationProps {
   currentPage: number
   totalPages: number
   onPageChange: (page: number) => void
-  showInfo?: boolean
+  className?: string
 }
 
-export function Pagination({ currentPage, totalPages, onPageChange, showInfo = true }) {
-  if (totalPages <= 1) return null
+export function Pagination({ currentPage, totalPages, onPageChange, className = '' }: PaginationProps) {
+  
+  // ✅ Handler interno com logs para debug
+  const handlePageClick = (page: number) => {
+    console.log('🔄 Clique na página:', page, 'Página atual:', currentPage)
+    
+    if (page !== currentPage && page >= 0 && page < totalPages) {
+      onPageChange(page)
+    }
+  }
 
-  const getVisiblePages = () => {
-    const delta = 1
+  // ✅ Gerar array de páginas para mostrar
+  const generatePageNumbers = () => {
+    const delta = 2 // Quantas páginas mostrar de cada lado
     const range = []
     const rangeWithDots = []
 
-    // ✅ LÓGICA CORRETA para evitar duplicação
-    const start = Math.max(0, currentPage - delta)
-    const end = Math.min(totalPages - 1, currentPage + delta)
+    for (let i = Math.max(0, currentPage - delta); 
+         i <= Math.min(totalPages - 1, currentPage + delta); 
+         i++) {
+      range.push(i)
+    }
 
-    // Sempre incluir primeira página
-    if (start > 0) {
+    if (range[0] > 1) {
+      rangeWithDots.push(0, '...')
+    } else if (range[0] === 1) {
       rangeWithDots.push(0)
-      if (start > 1) rangeWithDots.push('...')
     }
 
-    // Páginas do meio
-    for (let i = start; i <= end; i++) {
-      rangeWithDots.push(i)
-    }
+    rangeWithDots.push(...range)
 
-    // Sempre incluir última página
-    if (end < totalPages - 1) {
-      if (end < totalPages - 2) rangeWithDots.push('...')
+    if (range[range.length - 1] < totalPages - 2) {
+      rangeWithDots.push('...', totalPages - 1)
+    } else if (range[range.length - 1] === totalPages - 2) {
       rangeWithDots.push(totalPages - 1)
     }
 
-    // ✅ REMOVER DUPLICATAS
-    return [...new Set(rangeWithDots)]
+    return rangeWithDots
   }
 
-  const visiblePages = getVisiblePages()
+  const pageNumbers = generatePageNumbers()
 
   return (
-    <div className="flex items-center justify-between bg-white px-4 py-3 sm:px-6 rounded-lg shadow-sm">
-      {showInfo && (
-        <div>
-          <p className="text-sm text-gray-700">
-            Página <span className="font-medium">{currentPage + 1}</span> de{' '}
-            <span className="font-medium">{totalPages}</span>
-          </p>
-        </div>
-      )}
+    <nav className={`flex items-center justify-center space-x-1 ${className}`} aria-label="Pagination">
+      
+      {/* Botão Anterior */}
+      <button
+        onClick={() => handlePageClick(currentPage - 1)}
+        disabled={currentPage === 0}
+        className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-l-md hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        aria-label="Página anterior"
+      >
+        <ChevronLeft className="w-4 h-4" />
+        <span className="ml-1 hidden sm:inline">Anterior</span>
+      </button>
 
-      <div>
-        <nav className="relative z-0 inline-flex -space-x-px rounded-md shadow-sm">
-          {/* Botão Anterior */}
-          <button
-            onClick={() => onPageChange(Math.max(0, currentPage - 1))}
-            disabled={currentPage === 0}
-            className="relative inline-flex items-center px-2 py-2 text-gray-400 bg-white border border-gray-300 rounded-l-md hover:bg-gray-50 disabled:opacity-50"
-          >
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-            </svg>
-          </button>
+      {/* Números das páginas */}
+      <div className="flex space-x-1">
+        {pageNumbers.map((pageNum, index) => {
+          if (pageNum === '...') {
+            return (
+              <span
+                key={`dots-${index}`}
+                className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300"
+              >
+                ...
+              </span>
+            )
+          }
 
-          {/* Números das páginas */}
-          {visiblePages.map((page, index) => (
+          const page = pageNum as number
+          const isActive = page === currentPage
+
+          return (
             <button
-              key={`page-${page}-${index}`} // ✅ Key única
-              onClick={() => typeof page === 'number' ? onPageChange(page) : undefined}
-              disabled={page === '...'}
-              className={`relative inline-flex items-center px-4 py-2 text-sm font-medium border ${
-                typeof page === 'number' && page === currentPage
-                  ? 'z-10 bg-police-50 border-police-500 text-police-600'
-                  : page === '...'
-                  ? 'bg-white border-gray-300 text-gray-700 cursor-default'
-                  : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+              key={page}
+              onClick={() => handlePageClick(page)}
+              className={`inline-flex items-center px-3 py-2 text-sm font-medium border transition-colors ${
+                isActive
+                  ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
+                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:text-gray-900'
               }`}
+              aria-label={`Ir para página ${page + 1}`}
+              aria-current={isActive ? 'page' : undefined}
             >
-              {typeof page === 'number' ? page + 1 : page}
+              {page + 1}
             </button>
-          ))}
-
-          {/* Botão Próximo */}
-          <button
-            onClick={() => onPageChange(Math.min(totalPages - 1, currentPage + 1))}
-            disabled={currentPage === totalPages - 1}
-            className="relative inline-flex items-center px-2 py-2 text-gray-400 bg-white border border-gray-300 rounded-r-md hover:bg-gray-50 disabled:opacity-50"
-          >
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-            </svg>
-          </button>
-        </nav>
+          )
+        })}
       </div>
-    </div>
+
+      {/* Botão Próximo */}
+      <button
+        onClick={() => handlePageClick(currentPage + 1)}
+        disabled={currentPage === totalPages - 1}
+        className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-r-md hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        aria-label="Próxima página"
+      >
+        <span className="mr-1 hidden sm:inline">Próximo</span>
+        <ChevronRight className="w-4 h-4" />
+      </button>
+    </nav>
   )
 }
