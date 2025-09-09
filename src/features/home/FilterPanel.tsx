@@ -1,13 +1,12 @@
-import React from 'react';
-import type { StatusPessoa, Sexo } from '@/types/person';
+import type { PersonStatus, Sexo } from '@/types/person';
 
 type Props = {
-  status?: StatusPessoa;
+  status?: PersonStatus;
   sexo?: Sexo;
   faixaIdadeInicial?: number;
   faixaIdadeFinal?: number;
   onChange: (next: {
-    status?: StatusPessoa;
+    status?: PersonStatus;
     sexo?: Sexo;
     faixaIdadeInicial?: number;
     faixaIdadeFinal?: number;
@@ -16,7 +15,7 @@ type Props = {
 
 export function FilterPanel({ status, sexo, faixaIdadeInicial, faixaIdadeFinal, onChange }: Props) {
   const handleStatusChange = (value: string) => {
-    onChange({ status: value === '' ? undefined : value as StatusPessoa });
+    onChange({ status: value === '' ? undefined : value as PersonStatus });
   };
 
   const handleSexoChange = (value: string) => {

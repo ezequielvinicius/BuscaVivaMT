@@ -1,4 +1,3 @@
-// src/components/ui/PersonDetailSkeleton.tsx - Loading específico para detalhes
 export function PersonDetailSkeleton() {
   return (
     <div className="min-h-screen bg-gray-50">

@@ -9,8 +9,8 @@ export interface PessoaDTO {
   nome: string
   idade?: number
   sexo: "MASCULINO" | "FEMININO"
-  vivo: boolean  // ⚠️ ESTE É O CAMPO REAL DA API
-  urlFoto?: string  // ⚠️ NOME CORRETO NA API
+  vivo: boolean  
+  urlFoto?: string  
   ultimaOcorrencia?: OcorrenciaDTO
 }
 
@@ -60,8 +60,8 @@ export interface FiltroParams {
   nome?: string
   faixaIdadeInicial?: number
   faixaIdadeFinal?: number
-  sexo?: "MASCULINO" | "FEMININO" | "Todos"  // ✅ Inclui 'Todos'
+  sexo?: "MASCULINO" | "FEMININO" | "Todos"  // Inclui 'Todos'
   pagina?: number
   porPagina?: number
-  status?: "DESAPARECIDO" | "LOCALIZADO" | "Todos"  // ✅ Inclui 'Todos'
+  status?: "DESAPARECIDO" | "LOCALIZADO" | "Todos"  // Inclui 'Todos'
 }

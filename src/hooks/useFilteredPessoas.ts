@@ -1,10 +1,9 @@
-// src/hooks/useFilteredPessoas.ts
-
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { listPessoas } from '@/service/personService';
-import { FiltroParams, PessoaDTO as RawPessoaFromApi, PaginatedResponse as PaginatedApiResponse } from '@/types/api';
-import { PersonListItem, PaginatedResponse as PaginatedPersonResponse, PersonStatus, Sexo } from '@/types/person';
+import { adaptPaginatedResponse } from '@/service/adapters/personAdapter';
+import type { FiltroParams } from '@/types/api';
+import type { PersonListItem } from '@/types/person';
 
 interface UseFilteredPessoasResult {
   data: PersonListItem[];
@@ -43,25 +42,10 @@ export function useFilteredPessoas(filtros: Partial<FiltroParams> = {}): UseFilt
       pagina: currentPage,
       porPagina: pageSize,
     }),
-    select: (apiResponse: PaginatedApiResponse<RawPessoaFromApi>): PaginatedPersonResponse<PersonListItem> => {
-      const contentLimpo = apiResponse.content.map((pessoaCrua): PersonListItem => {
-        const status: PersonStatus = pessoaCrua.ultimaOcorrencia?.dataLocalizacao ? 'LOCALIZADO' : 'DESAPARECIDO';
-        return {
-          id: pessoaCrua.id,
-          nome: pessoaCrua.nome,
-          idade: pessoaCrua.idade,
-          sexo: pessoaCrua.sexo as Sexo,
-          fotoPrincipal: pessoaCrua.urlFoto || '',
-          cidade: pessoaCrua.ultimaOcorrencia?.localDesaparecimentoConcat || 'Local não informado',
-          dataDesaparecimento: pessoaCrua.ultimaOcorrencia?.dtDesaparecimento || '',
-          status: status,
-        };
-      });
-      return { ...apiResponse, content: contentLimpo };
-    },
+    select: adaptPaginatedResponse,
     staleTime: 5 * 60 * 1000,
     retry: 2,
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
   });
 
   const dadosFinais = useMemo(() => {

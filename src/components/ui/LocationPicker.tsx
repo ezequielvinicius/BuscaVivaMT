@@ -1,11 +1,9 @@
-// src/components/ui/LocationPicker.tsx - Mapa com seleção de localização
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet'
 import { MapPin, Navigation, RotateCcw } from 'lucide-react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
-// ✅ Corrigir ícones do Leaflet
 const customIcon = new L.Icon({
   iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
@@ -31,7 +29,7 @@ export function LocationPicker({ onLocationSelect, initialLocation, className }:
     initialLocation ? [initialLocation.lat, initialLocation.lng] : [-15.6014, -56.0979] // Cuiabá, MT
   )
 
-  // ✅ Componente interno para capturar cliques no mapa
+  // Componente interno para capturar cliques no mapa
   function LocationMarker() {
     useMapEvents({
       click(e) {
@@ -51,7 +49,7 @@ export function LocationPicker({ onLocationSelect, initialLocation, className }:
     ) : null
   }
 
-  // ✅ Obter localização atual do usuário
+  // Obter localização atual do usuário
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
       alert('Geolocalização não suportada neste navegador')
@@ -84,7 +82,7 @@ export function LocationPicker({ onLocationSelect, initialLocation, className }:
     )
   }
 
-  // ✅ Resetar seleção
+  // Resetar seleção
   const resetLocation = () => {
     setSelectedPosition(null)
     onLocationSelect({ lat: 0, lng: 0 })
@@ -170,7 +168,7 @@ export function LocationPicker({ onLocationSelect, initialLocation, className }:
             <MapPin className="w-5 h-5 text-green-600 mt-0.5" />
             <div>
               <p className="text-sm font-medium text-green-800 mb-1">
-                ✅ Localização selecionada
+               Localização selecionada
               </p>
               <div className="text-xs text-green-700 space-y-1">
                 <p><strong>Latitude:</strong> {selectedPosition.lat.toFixed(6)}</p>

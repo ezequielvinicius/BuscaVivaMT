@@ -1,5 +1,4 @@
-// src/components/ui/StatusPill.tsx - VERSÃO COM ÍCONES LUCIDE
-import { Search, CheckCircle, HelpCircle } from 'lucide-react' // ✅ Ícones corretos
+import { Search, CheckCircle, HelpCircle } from 'lucide-react' 
 
 type StatusType = 'DESAPARECIDO' | 'LOCALIZADO'
 type SizeType = 'sm' | 'md' | 'lg'
@@ -15,19 +14,19 @@ export function StatusPill({ status, size = 'md' }: StatusPillProps) {
       case 'DESAPARECIDO':
         return {
           label: 'Desaparecido',
-          Icon: Search, // ✅ Componente ícone
+          Icon: Search, // Componente ícone
           className: 'bg-red-100 text-red-800 border-red-200'
         }
       case 'LOCALIZADO':
         return {
           label: 'Localizado',
-          Icon: CheckCircle, // ✅ Componente ícone
+          Icon: CheckCircle, // Componente ícone
           className: 'bg-green-100 text-green-800 border-green-200'
         }
       default:
         return {
           label: 'Desconhecido',
-          Icon: HelpCircle, // ✅ Componente ícone
+          Icon: HelpCircle, // Componente ícone
           className: 'bg-gray-100 text-gray-800 border-gray-200'
         }
     }

@@ -15,7 +15,6 @@ export function Header() {
             className="flex items-center space-x-4 hover:opacity-90 transition-opacity duration-200 group"
             aria-label="Página inicial do BuscaVivaMT"
           >
-            {/* Logo da Polícia Civil */}
             <div className="flex-shrink-0 bg-white/10 backdrop-blur-sm rounded-full p-3 group-hover:bg-white/15 transition-all duration-200">
               <svg 
                 className="h-10 w-10 text-white" 

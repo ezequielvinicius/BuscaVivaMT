@@ -1,4 +1,3 @@
-// src/components/ui/Pagination.tsx - COMPONENTE CORRIGIDO
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface PaginationProps {
@@ -10,7 +9,7 @@ interface PaginationProps {
 
 export function Pagination({ currentPage, totalPages, onPageChange, className = '' }: PaginationProps) {
   
-  // ✅ Handler interno com logs para debug
+  // Handler interno com logs para debug
   const handlePageClick = (page: number) => {
     console.log('🔄 Clique na página:', page, 'Página atual:', currentPage)
     
@@ -19,7 +18,7 @@ export function Pagination({ currentPage, totalPages, onPageChange, className = 
     }
   }
 
-  // ✅ Gerar array de páginas para mostrar
+  // Gerar array de páginas para mostrar
   const generatePageNumbers = () => {
     const delta = 2 // Quantas páginas mostrar de cada lado
     const range = []

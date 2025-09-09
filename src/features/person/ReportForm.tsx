@@ -73,7 +73,6 @@ export function ReportForm({ ocoId, personName, onSuccess, onCancel }: ReportFor
   const {
     control,
     handleSubmit,
-    register,
     formState: { errors },
     watch,
     setValue

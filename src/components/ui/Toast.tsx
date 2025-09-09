@@ -1,4 +1,3 @@
-// src/components/ui/Toast.tsx - Sistema completo de notificações elegantes
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { CheckCircle, XCircle, Info, AlertTriangle, X } from 'lucide-react'
 
@@ -18,7 +17,7 @@ interface ToastContextType {
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined)
 
-// ✅ Hook para usar toast
+// Hook para usar toast
 export const useToast = () => {
   const context = useContext(ToastContext)
   if (!context) {
@@ -27,7 +26,7 @@ export const useToast = () => {
   return context
 }
 
-// ✅ Componente de Toast individual
+// Componente de Toast individual
 const ToastItem: React.FC<{ toast: Toast; onRemove: (id: number) => void }> = ({ toast, onRemove }) => {
   const [isExiting, setIsExiting] = useState(false)
   
@@ -81,7 +80,7 @@ const ToastItem: React.FC<{ toast: Toast; onRemove: (id: number) => void }> = ({
   )
 }
 
-// ✅ Provider do Toast
+// Provider do Toast
 export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [toasts, setToasts] = useState<Toast[]>([])
 

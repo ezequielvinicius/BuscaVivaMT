@@ -1,4 +1,3 @@
-// src/components/ui/Modal.tsx - Modal simples e funcional
 import { ReactNode, useEffect } from 'react'
 import { X } from 'lucide-react'
 

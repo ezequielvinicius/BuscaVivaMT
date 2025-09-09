@@ -1,19 +1,19 @@
-import '@testing-library/jest-dom'
-import { afterEach } from 'vitest'
-import { cleanup } from '@testing-library/react'
+import '@testing-library/jest-dom';
+import { afterEach } from 'vitest';
+import { cleanup } from '@testing-library/react';
 
 // Limpa após cada teste
 afterEach(() => {
-  cleanup()
-})
+  cleanup();
+});
 
 // Mock para ResizeObserver
 global.ResizeObserver = class ResizeObserver {
-  constructor(cb: any) {}
+  constructor(_cb: any) {}
   observe() {}
   unobserve() {}
   disconnect() {}
-}
+};
 
 // Mock para window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
@@ -28,8 +28,8 @@ Object.defineProperty(window, 'matchMedia', {
     removeEventListener: () => {},
     dispatchEvent: () => {},
   }),
-})
+});
 
 // Mock para URL APIs
-global.URL.createObjectURL = () => 'blob:mock-url'
-global.URL.revokeObjectURL = () => {}
+global.URL.createObjectURL = () => 'blob:mock-url';
+global.URL.revokeObjectURL = () => {};

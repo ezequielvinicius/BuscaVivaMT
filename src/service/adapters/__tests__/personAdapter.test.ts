@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { 
   adaptPersonToListItem, 
   adaptPersonToDetail
-} from '../personAdapter'  // ✅ Import correto - sem determinePersonStatus pois é função interna
+} from '../personAdapter' 
 import type { PessoaDTO } from '@/types/api'
 
 describe('PersonAdapter', () => {

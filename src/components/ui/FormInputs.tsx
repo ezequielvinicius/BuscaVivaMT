@@ -1,4 +1,3 @@
-// src/components/ui/FormInputs.tsx - FileInput com preview de imagens
 import { useState, useRef, useCallback } from 'react'
 import { Upload, X, Image as ImageIcon, AlertCircle } from 'lucide-react'
 

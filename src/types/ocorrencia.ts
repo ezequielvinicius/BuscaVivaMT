@@ -14,7 +14,7 @@ export interface OcorrenciaInformacao {
 }
 
 /**
- * DTO da API para informações de ocorrência - NÃO use na UI
+ * DTO da API para informações de ocorrência 
  */
 export interface OcorrenciaInformacaoDTO {
   id?: number

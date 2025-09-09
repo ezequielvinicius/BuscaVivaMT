@@ -81,7 +81,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 }
 
-// Hook opcional para capturar erros em componentes funcionais
+// Hook para capturar erros em componentes funcionais
 export function useErrorHandler() {
   return (error: unknown, info?: { componentStack?: string }) => {
     console.error('Erro capturado:', error, info)

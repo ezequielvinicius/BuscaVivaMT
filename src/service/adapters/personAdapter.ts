@@ -1,17 +1,11 @@
-// src/service/adapters/personAdapter.ts - APENAS DATALOCALIZACAO COMO FONTE DA VERDADE
-import type { PessoaDTO } from '@/types/api'
-import type { PersonListItem, PersonDetail, PersonStatus, PaginatedResponse } from '@/types/person'
+import type { PagePessoaDTO, PessoaDTO } from '@/types/api';
+import type { PersonListItem, PersonDetail, PersonStatus, PaginatedResponse } from '@/types/person';
 
-/**
- * ✅ ÚNICA MUDANÇA: dataLocalizacao como fonte da verdade
- * Se tem dataLocalizacao = LOCALIZADO
- * Se não tem dataLocalizacao = DESAPARECIDO
- */
 function corrigirStatusVisual(pessoa: PessoaDTO): PersonStatus {
   if (pessoa.ultimaOcorrencia?.dataLocalizacao) {
-    return 'LOCALIZADO'
+    return 'LOCALIZADO';
   }
-  return 'DESAPARECIDO'
+  return 'DESAPARECIDO';
 }
 
 export function adaptPersonToListItem(pessoa: PessoaDTO | null): PersonListItem {
@@ -24,7 +18,7 @@ export function adaptPersonToListItem(pessoa: PessoaDTO | null): PersonListItem 
       fotoPrincipal: '',
       cidade: '',
       dataDesaparecimento: ''
-    }
+    };
   }
 
   return {
@@ -32,15 +26,15 @@ export function adaptPersonToListItem(pessoa: PessoaDTO | null): PersonListItem 
     nome: (pessoa.nome || '').trim() || 'Nome não informado',
     idade: pessoa.idade,
     sexo: ['MASCULINO', 'FEMININO'].includes(pessoa.sexo) ? pessoa.sexo : 'MASCULINO',
-    status: corrigirStatusVisual(pessoa), // ✅ ÚNICA MUDANÇA AQUI
+    status: corrigirStatusVisual(pessoa),
     fotoPrincipal: pessoa.urlFoto || '',
     cidade: pessoa.ultimaOcorrencia?.localDesaparecimentoConcat || '',
     dataDesaparecimento: pessoa.ultimaOcorrencia?.dtDesaparecimento || ''
-  }
+  };
 }
 
 export function adaptPersonToDetail(pessoa: PessoaDTO | null): PersonDetail {
-  const baseItem = adaptPersonToListItem(pessoa)
+  const baseItem = adaptPersonToListItem(pessoa);
   
   if (!pessoa) {
     return {
@@ -50,10 +44,10 @@ export function adaptPersonToDetail(pessoa: PessoaDTO | null): PersonDetail {
       informacaoBreve: '',
       vestimentas: '',
       cartazes: []
-    }
+    };
   }
 
-  const ocorrencia = pessoa.ultimaOcorrencia
+  const ocorrencia = pessoa.ultimaOcorrencia;
 
   return {
     ...baseItem,
@@ -69,19 +63,20 @@ export function adaptPersonToDetail(pessoa: PessoaDTO | null): PersonDetail {
         urlCartaz: cartaz.urlCartaz,
         tipoCartaz: cartaz.tipoCartaz || 'Cartaz'
       }))
-  }
+  };
 }
 
 export function removeDuplicatedPersons<T extends { id: number }>(persons: T[]): T[] {
-  const seen = new Set<number>()
+  const seen = new Set<number>();
   return persons.filter(person => {
-    if (seen.has(person.id)) return false
-    seen.add(person.id)
-    return true
-  })
+    if (seen.has(person.id)) return false;
+    seen.add(person.id);
+    return true;
+  });
 }
 
-export function adaptPaginatedResponse(apiResponse: any): PaginatedResponse<PersonListItem> {
+// A função aceita o tipo específico 'PagePessoaDTO'
+export function adaptPaginatedResponse(apiResponse: PagePessoaDTO | null | undefined): PaginatedResponse<PersonListItem> {
   if (!apiResponse || typeof apiResponse !== 'object') {
     return {
       content: [],
@@ -93,12 +88,14 @@ export function adaptPaginatedResponse(apiResponse: any): PaginatedResponse<Pers
       first: true,
       last: true,
       empty: true
-    }
+    };
   }
 
+  // TypeScript sabe que 'apiResponse.content' é um array de 'PessoaDTO',
+  // então 'pessoa' é corretamente tipado como 'PessoaDTO' no map.
   const pessoas = (Array.isArray(apiResponse.content) ? apiResponse.content : [])
     .map(pessoa => adaptPersonToListItem(pessoa))
-    .filter((person: PersonListItem) => person.id > 0)
+    .filter((person: PersonListItem) => person.id > 0);
 
   return {
     content: removeDuplicatedPersons(pessoas),
@@ -110,5 +107,5 @@ export function adaptPaginatedResponse(apiResponse: any): PaginatedResponse<Pers
     first: apiResponse.first ?? true,
     last: apiResponse.last ?? true,
     empty: pessoas.length === 0
-  }
+  };
 }

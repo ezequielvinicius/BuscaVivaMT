@@ -12,7 +12,7 @@ export interface PersonListItem {
   nome: string
   idade?: number
   sexo: Sexo
-  status: PersonStatus  // ⚠️ CALCULADO, NÃO DIRETO DA API
+  status: PersonStatus  // CALCULADO, NÃO DIRETO DA API
   fotoPrincipal: string
   cidade: string
   dataDesaparecimento: string
